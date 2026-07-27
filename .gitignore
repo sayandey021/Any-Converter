@@ -1,0 +1,87 @@
+# =========================================================================
+# Any Converter - Git Ignore Configuration
+# =========================================================================
+
+# --- Packaging & Distribution ---
+dist/
+build/
+build_bak/
+MsixTemp/
+bin/
+ffmpeg/
+
+
+# --- Compiled Python files ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# --- Flet Temporary Directories ---
+.flet/
+.flet_view/
+
+# --- Signing Certificates & Secrets (CRITICAL SECURITY) ---
+*.pfx
+*.cer
+*.key
+*.pem
+.env
+.env.local
+.env.*
+
+# --- System & IDE Configs ---
+.vscode/
+.idea/
+.project
+.pydevproject
+.settings/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*~
+
+# --- Logs & Debug files ---
+*.log
+error.log
+ffmpeg_error.log
+
+# --- Local Databases & User Session Data ---
+history.json
+settings.json
+
+# --- OS-specific files ---
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- Temp, Scratch & Test Files ---
+temp/
+scratch/
+test.azw3
+*.azw3
+*.azw
+*.mobi
+*.epub
+*.djvu
+*.djv
+*.iba
+*.pdf
+*.docx
+*.xlsx
+*.pptx
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
+*.iso

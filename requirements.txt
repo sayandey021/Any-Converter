@@ -1,0 +1,13 @@
+flet==0.85.3
+flet-desktop==0.85.3
+flet-web==0.85.3
+Pillow
+requests
+pillow-heif
+pywin32
+xmltodict
+pymupdf
+trimesh
+networkx
+scipy
+pyyaml
