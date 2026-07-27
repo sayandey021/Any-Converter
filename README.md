@@ -1,9 +1,15 @@
-# 🌌 Any Converter
+<p align="center">
+  <img src="assets/icon.png" width="128" height="128" alt="Any Converter Logo" />
+</p>
 
-[![Python Version](https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Flet GUI](https://img.shields.io/badge/UI-Flet_0.85-7c3aed.svg?style=for-the-badge&logo=flutter&logoColor=white)](https://flet.dev)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-orange.svg?style=for-the-badge)](https://makeapullrequest.com)
+<h1 align="center">Any Converter</h1>
+
+<p align="center">
+  <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python Version" /></a>
+  <a href="https://flet.dev"><img src="https://img.shields.io/badge/UI-Flet_0.85-7c3aed.svg?style=for-the-badge&logo=flutter&logoColor=white" alt="Flet GUI" /></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License: MIT" /></a>
+  <a href="https://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-orange.svg?style=for-the-badge" alt="PRs Welcome" /></a>
+</p>
 
 **Any Converter** is a premium, fully-featured, offline-first desktop application that allows you to convert files across a massive array of formats—completely locally, with zero data leaving your machine.
 
