@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Changelog-v1.2.1-blueviolet.svg?style=for-the-badge&logo=git&logoColor=white" alt="Changelog" /></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python Version" /></a>
   <a href="https://flet.dev"><img src="https://img.shields.io/badge/UI-Flet-7c3aed.svg?style=for-the-badge&logo=flutter&logoColor=white" alt="Flet GUI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License: MIT" /></a>
