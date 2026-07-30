@@ -139,7 +139,7 @@ class AboutView(ft.Container):
                 ft.Container(height=16),
                 ft.Text("Any Converter", size=30, weight=ft.FontWeight.W_800, color=AppTheme.TEXT_PRIMARY),
                 ft.Container(height=2),
-                ft.Text("Version 1.1.0", size=14, color=AppTheme.TEXT_MUTED, weight=ft.FontWeight.W_500),
+                ft.Text("Version 1.2.1", size=14, color=AppTheme.TEXT_MUTED, weight=ft.FontWeight.W_500),
                 ft.Container(height=12),
                 ft.Text("Developed by Sayan Dey", size=15, color=AppTheme.TEXT_SECONDARY, weight=ft.FontWeight.W_600),
                 ft.Container(height=10),

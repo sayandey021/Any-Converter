@@ -5,127 +5,87 @@
 <h1 align="center">Any Converter</h1>
 
 <p align="center">
-  <a href="https://python.org"><img src="https://img.shields.io/badge/python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python Version" /></a>
-  <a href="https://flet.dev"><img src="https://img.shields.io/badge/UI-Flet_0.85-7c3aed.svg?style=for-the-badge&logo=flutter&logoColor=white" alt="Flet GUI" /></a>
-  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License: MIT" /></a>
-  <a href="https://makeapullrequest.com"><img src="https://img.shields.io/badge/PRs-welcome-orange.svg?style=for-the-badge" alt="PRs Welcome" /></a>
+  <strong>Fast, Private & Offline File Converter for Windows</strong>
 </p>
 
-**Any Converter** is a premium, fully-featured, offline-first desktop application that allows you to convert files across a massive array of formats—completely locally, with zero data leaving your machine.
-
-With a gorgeous, glassmorphic UI, responsive layouts, customizable accent colors, and dynamic theme switching, **Any Converter** provides the visual polish of modern SaaS web apps in a lightweight, high-performance offline desktop wrapper.
-
----
-
-## ✨ Features
-
-- **🔒 100% Offline & Private:** Your files never leave your computer. All conversions are executed locally using high-performance native engines.
-- **🎨 Stunning Glassmorphic UI:** A premium desktop interface designed with subtle micro-animations, theme options (light/dark), and customizable accent colors.
-- **⚙️ Automated Dependency Setup:** Automatically detects and downloads engines like FFmpeg on first launch, requiring zero setup by the user.
-- **📂 Bulk & Complex Operations:** Supports bulk queueing, multi-threaded conversion tasks, and detailed progress logs.
-- **📦 Windows Native Packaging:** Includes built-in scripts to compile into portable single-file executables (`.exe`) or signed Windows Installer packages (`.msix`).
+<p align="center">
+  <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python Version" /></a>
+  <a href="https://flet.dev"><img src="https://img.shields.io/badge/UI-Flet-7c3aed.svg?style=for-the-badge&logo=flutter&logoColor=white" alt="Flet GUI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License: MIT" /></a>
+  <a href="SUPPORTED_FORMATS.md"><img src="https://img.shields.io/badge/Formats-100+-orange.svg?style=for-the-badge" alt="Supported Formats" /></a>
+</p>
 
 ---
 
-## 🧭 Project Architecture
+**Any Converter** is a fast, modern, and completely private desktop application for converting your media, documents, vector graphics, 3D models, databases, and archives—entirely on your PC.
 
-```mermaid
-graph TD
-    A[main.py: App Entry & Dependency Check] --> B[src/ui/theme.py: Glassmorphism Theme Engine]
-    A --> C[src/ui/main_view.py: Dashboard & Navigation]
-    C --> D[src/ui/conversion_card.py: File Queue UI]
-    D --> E[src/backend/converter.py: Routing & Conversions]
-    E --> F[src/backend/ffmpeg_manager.py: Audio & Video]
-    E --> G[src/backend/office2pdf_manager.py: MS Office docs]
-    E --> H[src/backend/fbx2gltf_manager.py: 3D Models]
-    E --> I[src/backend/thumbnail_manager.py: File Previews]
-```
+No file size limits. No cloud uploads. No subscriptions. 100% free and open source.
 
 ---
 
-## 📋 Supported Formats
+## ✨ Key Highlights
 
-Any Converter supports a comprehensive set of file format categories:
-
-| Category | Input Extensions | Output Extensions | Native Engines |
-| :--- | :--- | :--- | :--- |
-| **🖼️ Images** | `.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.gif`, `.heic`, `.heif`, `.psd`, `.ico`, `.tiff`, `.avif`, `.jxl`, `RAW` | `.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.gif`, `.ico`, `.tiff`, `.avif`, `.jxl` | Pillow, Pillow-HEIF |
-| **🎥 Video** | `.mp4`, `.mkv`, `.avi`, `.mov`, `.webm`, `.wmv`, `.flv`, `.f4v`, `.mxf`, `.asf`, `.mts`, `.vob`, `.ts`, `.3gp`, `.mpg` | `.mp4`, `.mkv`, `.avi`, `.mov`, `.webm`, `.wmv`, `.flv`, `.f4v`, `.mxf`, `.ts`, `.mpg` | FFmpeg |
-| **🎵 Audio** | `.mp3`, `.wav`, `.flac`, `.m4a`, `.aac`, `.ogg`, `.aiff`, `.alac`, `.wma`, `.amr`, `.ac3`, `.eac3`, `.dts`, `.dtshd` | `.mp3`, `.wav`, `.flac`, `.m4a`, `.aac`, `.aiff`, `.alac`, `.wma`, `.amr`, `.ac3`, `.eac3`, `.thd`, `.dts` | FFmpeg |
-| **📄 Documents** | `.doc`, `.docx`, `.docm`, `.dot`, `.rtf`, `.txt`, `.log`, `.odt`, `.xls`, `.xlsx`, `.ods`, `.ppt`, `.pptx`, `.pps` | `.pdf` | PyWin32 (Office API) / Internal Fallback |
-| **📊 Data & Config** | `.json`, `.yaml`, `.yml`, `.csv`, `.xml` | `.json`, `.yaml`, `.yml`, `.csv`, `.xml`, `.pdf` | PyYAML, xmltodict, Pillow |
-| **📚 PDFs & E-Books** | `.pdf`, `.epub`, `.mobi`, `.azw3`, `.azw`, `.iba`, `.djvu` | `.pdf`, `.png`, `.jpg`, `.jpeg`, `.webp` | PyMuPDF (Fitz) |
-| **🧊 3D & CAD** | `.obj`, `.stl`, `.ply`, `.glb`, `.gltf`, `.off`, `.dae`, `.fbx`, `.step`, `.stp`, `.iges`, `.dxf`, `.dwg`, `.3mf` | `.obj`, `.stl`, `.ply`, `.glb`, `.gltf`, `.off`, `.dae` | Trimesh, FBX2glTF |
-| **🗄️ Databases** | `.sql`, `.db`, `.sqlite`, `.sqlite3`, `.mdb`, `.accdb` | `.sql`, `.sqlite`, `.json`, `.csv`, `.xml`, `.yaml` | SQLite3 Python engine |
-| **🗺️ Geospatial** | `.geojson`, `.kml`, `.kmz`, `.gpx`, `.shp` | `.geojson`, `.kml`, `.gpx`, `.csv`, `.json` | Standard geo-parsers |
-| **📦 Archives** | `.zip`, `.rar`, `.7z`, `.tar`, `.gz`, `.tgz`, `.bz2`, `.xz`, `.iso`, `.img`, `.mds`, `.mdf` | `zip`, `7z`, `tar`, `tar.gz`, `tar.bz2`, `tar.xz`, `iso`, `folder` | pycdlib, zipfile, tarfile |
-| **💬 Subtitles** | `.srt`, `.vtt`, `.ass`, `.ssa`, `.sub`, `.scc` | `.srt`, `.vtt`, `.ass`, `.sub`, `.scc`, `.txt` | Subtitle parser modules |
-| **🔤 Fonts** | `.ttf`, `.otf`, `.woff`, `.woff2` | `.ttf`, `.otf`, `.woff`, `.woff2` | FontTools engine |
-| **✒️ Vectors** | `.svg` | `.png`, `.jpg`, `.jpeg`, `.pdf`, `.svg` | PyMuPDF / CairoSVG fallback |
-
-*For a granular breakdown, see [SUPPORTED_FORMATS.md](SUPPORTED_FORMATS.md).*
+- 🔒 **100% Private & Offline:** Your files stay on your computer. All processing happens locally with zero data sent to external servers.
+- ⚡ **Lightning Fast & Multi-Threaded:** Batch convert multiple files simultaneously with real-time progress tracking.
+- 🎨 **Beautiful Modern UI:** A sleek, glassmorphic interface with dark/light themes, customizable accent colors, and interactive drag-and-drop.
+- 🔄 **Smart Fallback Engine:** Automatically cascades across installed office suites (Microsoft Office, LibreOffice, WPS Office) for seamless document conversions.
+- 🧩 **Zero-Setup Dependencies:** Automatically configures conversion engines (FFmpeg, Assimp 3D) on first launch—no manual setup required.
 
 ---
 
-## 🛠️ Installation & Setup
+## 🗂️ What Can You Convert?
 
-### Prerequisites
-- **Python 3.9** or higher installed on your computer.
-- **Git** (optional, for cloning the repository).
-- **Microsoft Office** (optional, required to convert legacy `.doc`, `.xls`, `.ppt` formats via win32 APIs).
+Any Converter supports **over 100+ file extensions** across 13 major categories:
 
-### Step 1: Clone the Repository
-```bash
-git clone https://github.com/sayandey021/Any-Converter.git
-cd Any-Converter
-```
+| Category | Highlights & Formats | Converts To |
+| :--- | :--- | :--- |
+| **🖼️ Images** | PNG, JPG, WebP, GIF, HEIC/HEIF, AVIF, JXL, BMP, ICO, TIFF, PSD, RAW, INDD | PNG, JPG, WebP, GIF, HEIC, AVIF, BMP, ICO, TIFF |
+| **🎥 Video** | MP4, MKV, AVI, MOV, WebM, WMV, FLV, MXF, HLS (`.m3u8`), DASH (`.mpd`), CMAF | MP4, MKV, AVI, MOV, WebM, WMV, Audio extraction |
+| **🎵 Audio** | MP3, WAV, FLAC, M4A, AAC, OGG, Opus, AIFF, ALAC, High-Res DSD/DFF, Tracker modules | MP3, WAV, FLAC, M4A, AAC, OGG, Opus, AIFF |
+| **📄 Documents** | DOCX, DOC, WPD, WPS, ODT, RTF, HTML, TXT, XLS, XLSX, PPT, PPTX, Visio, Publisher, MS Project | PDF |
+| **✒️ Vector Graphics** | SVG, AI, EPS, PS, CorelDRAW (`.cdr`), XPS, OXPS | PNG, JPG, WebP, PDF, SVG |
+| **🧊 3D Models & CAD** | OBJ, STL, PLY, GLB, GLTF, FBX, STEP, IGES, DXF, DWG, OpenSCAD (`.scad`), DWF, 3DS | OBJ, STL, PLY, GLB, GLTF, FBX, STEP |
+| **📚 PDFs & E-Books** | PDF, EPUB, MOBI, AZW3, DJVU, CBR, CBZ, CB7 comic archives | PDF, Image pages (PNG/JPG) |
+| **📊 Data & Config** | JSON, YAML, CSV, XML, vCard (`.vcf`), iCalendar (`.ics`) | JSON, YAML, CSV, XML, PDF |
+| **🗄️ Databases** | SQLite (`.db`, `.sqlite`), SQL Dumps, MS Access (`.mdb`, `.accdb`) | SQL, SQLite, JSON, CSV, XML, YAML |
+| **🗺️ Geospatial** | GeoJSON, KML, KMZ, GPX, Shapefiles (`.shp`) | GeoJSON, KML, GPX, CSV, JSON |
+| **📦 Archives** | ZIP, RAR, 7Z, TAR, GZ, ISO optical images, MDF/MDS disk images | ZIP, 7Z, TAR, ISO, Folder extraction |
+| **💬 Subtitles** | SRT, VTT, ASS, SSA, SUB, SCC | SRT, VTT, ASS, SUB, TXT |
+| **🔤 Fonts** | TTF, OTF, WOFF, WOFF2, EOT, Mac `.dfont` | TTF, OTF, WOFF, WOFF2, EOT |
 
-### Step 2: Set Up Virtual Environment (Recommended)
-```bash
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-```
-
-### Step 3: Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### Step 4: Run the Application
-```bash
-python main.py
-```
-*On your very first run, Any Converter will automatically download and set up the FFmpeg engine. This process only occurs once.*
+👉 *Check out [SUPPORTED_FORMATS.md](SUPPORTED_FORMATS.md) for the complete list of supported extensions.*
 
 ---
 
-## 📦 Packaging and Compiling
+## 🚀 Quick Start
 
-Any Converter includes a native build tool (`build.bat`) to package your code for distribution.
+### Running from Source
 
-Run the build script in Windows:
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/sayandey021/Any-Converter.git
+   cd Any-Converter
+   ```
+
+2. **Install dependencies & run:**
+   ```bash
+   pip install -r requirements.txt
+   python main.py
+   ```
+   *Any Converter automatically sets up FFmpeg and 3D engines on first launch.*
+
+---
+
+## 📦 Building Executable Binary
+
+To package a standalone portable `.exe` for Windows:
 ```cmd
 build.bat
 ```
-
-You will be presented with a menu:
-1. **Build Standalone Portable Executable (EXE):** Creates a self-contained `.exe` file under `dist/AnyConverterApp.exe` with all assets, Python environment, and Flet dependencies bundled.
-2. **Build Windows Installer Package (MSIX):** Compiles the application and generates a signed Windows App Package (`dist/AnyConverter.msix`) using MSIX packaging tools.
-3. **Update Application Version:** Automatically increments the product metadata throughout the files.
+Select option `1` to generate a self-contained executable under `dist/AnyConverterApp.exe`.
 
 ---
 
-## 🤝 Contributing
+## 📄 License
 
-We welcome contributions to add support for new formats, optimize conversion speeds, or improve UI interactions! 
-
-Please refer to our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on code styles, opening issues, and pull request procedures.
-
----
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Distributed under the MIT License. See [LICENSE](LICENSE) for details.
