@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 from flet_cli.commands.pack import Command
 import flet_cli.__pyinstaller.win_utils as win_utils
 
@@ -16,11 +16,18 @@ def safe_update(exe_path, product_name, file_description, product_version, file_
     import tempfile, uuid
     from pathlib import Path
     import PyInstaller.utils.win32.versioninfo as versioninfo
-    
+    def parse_ver(v_str):
+        try:
+            parts = [int(x) for x in (v_str or '1.0.0.0').split('.')]
+        except ValueError:
+            parts = [1, 0, 0, 0]
+        while len(parts) < 4: parts.append(0)
+        return tuple(parts[:4])
+
     vs = versioninfo.VSVersionInfo(
         ffi=versioninfo.FixedFileInfo(
-            filevers=(1, 0, 0, 0),
-            prodvers=(1, 0, 0, 0),
+            filevers=parse_ver(file_version),
+            prodvers=parse_ver(product_version),
             mask=0x3F,
             flags=0x0,
             OS=0x40004,

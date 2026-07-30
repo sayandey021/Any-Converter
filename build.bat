@@ -29,7 +29,7 @@ echo ===================================================
 echo [1/1] Packaging Standalone Executable...
 echo ===================================================
 set "FLET_VIEW_PATH=%CD%\.flet_view"
-python scripts\custom_pack.py main.py -y --name "AnyConverterApp" --icon assets\icon.ico --add-data "assets;assets" --add-data "bin;bin" --distpath "dist" --product-name "Any Converter" --file-description "Any Converter" --product-version "1.0.0.0" --file-version "1.0.0.0" --company-name "SwiftGrab" --copyright "Copyright (c) 2026 SwiftGrab"
+python scripts\custom_pack.py main.py -y --name "AnyConverterApp" --icon assets\icon.ico --add-data "assets;assets" --add-data "bin;bin" --distpath "dist" --product-name "Any Converter" --file-description "Any Converter" --product-version "1.1.0.0" --file-version "1.1.0.0" --company-name "SwiftGrab" --copyright "Copyright (c) 2026 SwiftGrab"
 
 if %errorlevel% neq 0 (
     echo.
@@ -48,7 +48,7 @@ echo ===================================================
 echo [1/2] Packaging Executable...
 echo ===================================================
 set "FLET_VIEW_PATH=%CD%\.flet_view"
-python scripts\custom_pack.py main.py -y --name "AnyConverterApp" --icon assets\icon.ico --add-data "assets;assets" --add-data "bin;bin" --distpath "dist" --product-name "Any Converter" --file-description "Any Converter" --product-version "1.0.0.0" --file-version "1.0.0.0" --company-name "SwiftGrab" --copyright "Copyright (c) 2026 SwiftGrab"
+python scripts\custom_pack.py main.py -y --name "AnyConverterApp" --icon assets\icon.ico --add-data "assets;assets" --add-data "bin;bin" --distpath "dist" --product-name "Any Converter" --file-description "Any Converter" --product-version "1.1.0.0" --file-version "1.1.0.0" --company-name "SwiftGrab" --copyright "Copyright (c) 2026 SwiftGrab"
 
 if %errorlevel% neq 0 (
     echo.

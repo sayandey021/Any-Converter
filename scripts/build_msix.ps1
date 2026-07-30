@@ -3,10 +3,10 @@
 
 $IdentityName = "Saayan.AnyConverter"
 $AppName = "AnyConverter"
-$DisplayName = "Any Converter"
+$DisplayName = "AnyConverter"
 $PublisherName = "CN=37E2AF47-D2FC-489C-BDC1-02C989A7B989"
 $PublisherDisplayName = "Saayan"
-$Version = "1.0.0.0"
+$Version = "1.1.0.0"
 $RootDir = (Get-Item $PSScriptRoot).Parent.FullName
 $ExePath = "$RootDir\dist\AnyConverterApp.exe"
 $MsixDir = "$RootDir\MsixTemp"

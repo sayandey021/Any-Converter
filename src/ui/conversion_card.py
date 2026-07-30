@@ -48,6 +48,7 @@ FILE_TYPE_MAP = {
     'azw':  (ft.Icons.AUTO_STORIES,   "#6366f1"),
     'iba':  (ft.Icons.MENU_BOOK,      "#6366f1"),
     'djvu': (ft.Icons.PICTURE_IN_PICTURE, "#dc2626"),
+    'chm':  (ft.Icons.BOOK,           "#6366f1"),
     'djv':  (ft.Icons.PICTURE_IN_PICTURE, "#dc2626"),
     'doc':  (ft.Icons.DESCRIPTION,    "#2563eb"),
     'docx': (ft.Icons.DESCRIPTION,    "#2563eb"),
@@ -100,11 +101,12 @@ FILE_TYPE_MAP = {
     'sub': (ft.Icons.SUBTITLES,       "#a855f7"),
     'scc': (ft.Icons.CLOSED_CAPTION,  "#a855f7"),
 
-    # Fonts
-    'ttf':   (ft.Icons.FONT_DOWNLOAD, "#14b8a6"),
-    'otf':   (ft.Icons.FONT_DOWNLOAD, "#14b8a6"),
-    'woff':  (ft.Icons.FONT_DOWNLOAD, "#14b8a6"),
-    'woff2': (ft.Icons.FONT_DOWNLOAD, "#14b8a6"),
+    'vsd':  (ft.Icons.SCHEMA,         "#0284c7"),
+    'vsdx': (ft.Icons.SCHEMA,         "#0284c7"),
+    'pub':  (ft.Icons.NEWSPAPER,      "#d97706"),
+    'mpp':  (ft.Icons.ASSIGNMENT,     "#059669"),
+    'wpd':  (ft.Icons.DESCRIPTION,    "#2563eb"),
+    'wps':  (ft.Icons.DESCRIPTION,    "#2563eb"),
 
     # Databases
     'sql':     (ft.Icons.STORAGE, "#6366f1"),
@@ -141,12 +143,16 @@ FILE_TYPE_MAP = {
     'svg':  (ft.Icons.BRUSH,          "#06b6d4"),
     'eps':  (ft.Icons.COLOR_LENS,     "#8b5cf6"),
     'ai':   (ft.Icons.PALETTE,        "#f97316"),
+    'ps':   (ft.Icons.AUTO_FIX_HIGH,  "#8b5cf6"),
+    'cdr':  (ft.Icons.DRAW,           "#10b981"),
+    'xps':  (ft.Icons.PICTURE_IN_PICTURE, "#06b6d4"),
+    'oxps': (ft.Icons.PICTURE_IN_PICTURE, "#06b6d4"),
 }
 
 FORMAT_GROUPS = {
-    'video': ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'vro', 'dat', 'mpg', 'mpeg'],
+    'video': ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'vro', 'dat', 'mpg', 'mpeg', 'm3u8', 'm3u', 'm4s'],
     'audio': ['mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg', 'aiff', 'alac', 'dff', 'dsf', 'mqa', 'mod', 's3m', 'xm', 'it', 'wma', 'ra', 'bwf', 'amr', 'ac3', 'eac3', 'thd', 'dts', 'dtshd', 'aob'],
-    'image': ['png', 'jpg', 'webp', 'gif', 'bmp', 'heic', 'heif', 'ico', 'tiff', 'tif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'avif', 'jxl'],
+    'image': ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic', 'heif', 'ico', 'tiff', 'tif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'avif', 'jxl', 'psd', 'indd', 'idml', 'raf', 'pef', 'tga', 'pcx', 'ppm', 'pgm', 'pbm', 'pnm', 'icns', 'sgi', 'dds', 'dib', 'xbm', 'xpm', 'cur', 'exr', 'dpx'],
     'markup': ['md'],
     'data': ['json', 'yaml', 'yml', 'csv', 'xml'],
     'database': ['sql', 'db', 'sqlite', 'sqlite3', 'mdb', 'accdb'],
@@ -155,12 +161,13 @@ FORMAT_GROUPS = {
     'subtitle': ['srt', 'vtt', 'ass', 'ssa', 'sub', 'scc'],
     'font': ['ttf', 'otf', 'woff', 'woff2'],
     'document': [
-        'pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'doc', 'docx', 'docm', 'dot', 'dotx', 'dotm', 'rtf', 'txt', 'log', 'odt', 'mht', 'html', 'htm',
+        'pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'doc', 'docx', 'docm', 'dot', 'dotx', 'dotm', 'rtf', 'txt', 'log', 'odt', 'mht', 'html', 'htm', 'wpd', 'wps',
         'xls', 'xlsx', 'xlsm', 'xlsb', 'ods',
-        'ppt', 'pptx', 'pptm', 'pps', 'odp'
+        'ppt', 'pptx', 'pptm', 'pps', 'odp',
+        'vsd', 'vsdx', 'pub', 'mpp'
     ],
     'model3d': ['obj', 'stl', 'ply', 'glb', 'gltf', 'off', 'dae', 'fbx', 'step', 'stp', 'iges', 'igs', 'dxf', 'dwg', '3mf'],
-    'vector': ['svg'],
+    'vector': ['svg', 'ai', 'eps', 'ps', 'cdr', 'xps', 'oxps'],
 }
 
 def _get_format_group(ext: str) -> str:
@@ -196,7 +203,7 @@ class ConversionCard(ft.Container):
 
         # Decide available target formats based on source type
         if self.src_group == 'video':
-            target_opts = ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'mp3', 'wav']
+            target_opts = ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'm3u8', 'm3u', 'm4s', 'mp3', 'wav']
             default = 'mp4'
         elif self.src_group == 'audio':
             target_opts = ['mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg', 'aiff', 'alac', 'wma', 'amr', 'ac3', 'eac3', 'thd', 'dts']
@@ -229,8 +236,8 @@ class ConversionCard(ft.Container):
             elif self.ext in ['rtf', 'html', 'htm']:
                 target_opts = ['pdf', 'md', 'txt', 'html', 'rtf']
                 default = 'pdf'
-            elif self.ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv']:
-                if self.ext in ['epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv']:
+            elif self.ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
+                if self.ext in ['epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
                     target_opts = ['pdf', 'png', 'jpg', 'webp']
                     default = 'pdf'
                 else:
@@ -241,15 +248,15 @@ class ConversionCard(ft.Container):
                 target_opts = ['pdf']
                 default = 'pdf'
         elif self.src_group == 'model3d':
-            target_opts = ['obj', 'stl', 'ply', 'glb', 'gltf', 'off', 'dae']
+            target_opts = ['obj', 'stl', 'ply', 'glb', 'gltf', 'off', 'dae', 'fbx', 'x', 'stp']
             default = 'glb' if self.ext in ['obj', 'stl', 'ply', 'off', 'dae', 'fbx', 'step', 'stp', 'iges', 'igs', 'dxf', 'dwg', '3mf'] else 'obj'
         elif self.src_group == 'vector':
             if self.ext == 'svg':
-                target_opts = ['png', 'jpg', 'webp', 'pdf', 'eps', 'ico']
+                target_opts = ['png', 'jpg', 'jpeg', 'webp', 'pdf', 'eps', 'ico']
                 default = 'png'
-            else:  # eps, ai
-                target_opts = ['pdf', 'png', 'jpg', 'webp', 'svg', 'ico']
-                default = 'pdf'
+            else:  # eps, ai, ps, cdr, xps, oxps
+                target_opts = ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'svg', 'ico']
+                default = 'pdf' if self.ext in ['ai', 'eps', 'ps', 'cdr', 'xps', 'oxps'] else 'png'
         else:  # image / other
             if self.ext == 'gif':
                 target_opts = ['mp4', 'webm', 'png', 'jpg', 'webp', 'ico']
@@ -323,7 +330,7 @@ class ConversionCard(ft.Container):
 
         if self.ext in ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'ico']:
             self._apply_thumbnail(job.input_path)
-        elif self.ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg', 'aiff', 'alac', 'dff', 'dsf', 'mqa', 'mod', 's3m', 'xm', 'it', 'wma', 'ra', 'bwf', 'amr', 'ac3', 'eac3', 'thd', 'dts', 'dtshd', 'obj', 'stl', 'ply', 'off', 'dae', 'glb', 'gltf', 'svg', 'tiff', 'tif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'avif', 'jxl', 'heic', 'heif', 'psd']:
+        elif self.ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg', 'aiff', 'alac', 'dff', 'dsf', 'mqa', 'mod', 's3m', 'xm', 'it', 'wma', 'ra', 'bwf', 'amr', 'ac3', 'eac3', 'thd', 'dts', 'dtshd', 'obj', 'stl', 'ply', 'off', 'dae', 'glb', 'gltf', 'svg', 'tiff', 'tif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'avif', 'jxl', 'heic', 'heif', 'psd']:
             thumb_path = get_thumbnail(job.input_path)
             if thumb_path:
                 self._apply_thumbnail(thumb_path)

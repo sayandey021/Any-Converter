@@ -50,7 +50,7 @@ def get_thumbnail(input_path: str) -> str | None:
             print(f"[THUMBNAIL] Error generating High-end Image thumbnail: {e}")
 
     # PDF & EPUB & eBook thumbnails
-    if ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv']:
+    if ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
         try:
             import fitz
             from src.backend.converter import load_ebook_doc
@@ -69,7 +69,7 @@ def get_thumbnail(input_path: str) -> str | None:
             print(f"[THUMBNAIL] Error generating eBook thumbnail: {e}")
 
     # Video thumbnails
-    elif ext in ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb']:
+    elif ext in ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'm3u8', 'm3u', 'm4s']:
         try:
             ffmpeg_exe = get_local_ffmpeg_exe()
             if ffmpeg_exe:

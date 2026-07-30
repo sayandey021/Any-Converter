@@ -548,7 +548,7 @@ class MainView(ft.Container):
                 continue
             
             # Smart default target format
-            if ext in ['mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'vro', 'dat', 'mpg', 'mpeg']:
+            if ext in ['mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'vro', 'dat', 'mpg', 'mpeg', 'm3u8', 'm3u', 'm4s']:
                 target = 'mp4'
             elif ext in ['mp4']:
                 target = 'mkv'
@@ -566,8 +566,8 @@ class MainView(ft.Container):
                 target = 'mp4'
             elif ext in ['md']:
                 target = 'html'
-            elif ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv']:
-                if ext in ['epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv']:
+            elif ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
+                if ext in ['epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
                     target = 'pdf'
                 else:
                     target = 'png'

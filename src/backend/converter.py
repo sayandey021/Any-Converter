@@ -12,6 +12,210 @@ try:
 except Exception:
     pass
 
+def open_indesign_preview(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
+    import io
+    from PIL import Image
+
+    if ext == '.indd':
+        import re
+        with open(file_path, 'rb') as f:
+            data = f.read()
+        jpeg_starts = [m.start() for m in re.finditer(b'\xFF\xD8\xFF', data)]
+        if not jpeg_starts:
+            raise Exception("No embedded JPEG preview found in INDD file.")
+        best_jpeg = None
+        max_size = 0
+        for start in jpeg_starts:
+            end = data.find(b'\xFF\xD9', start)
+            if end != -1:
+                jpeg_data = data[start:end+2]
+                if len(jpeg_data) > max_size:
+                    max_size = len(jpeg_data)
+                    best_jpeg = jpeg_data
+        if best_jpeg and max_size > 1024:
+            return Image.open(io.BytesIO(best_jpeg))
+        else:
+            raise Exception("Could not find a valid embedded preview image in INDD file.")
+    elif ext == '.idml':
+        import zipfile
+        with zipfile.ZipFile(file_path, 'r') as z:
+            candidates = [name for name in z.namelist() if 'thumbnail' in name.lower() or name.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            if candidates:
+                best_cand = max(candidates, key=lambda c: z.getinfo(c).file_size)
+                img_data = z.read(best_cand)
+                return Image.open(io.BytesIO(img_data))
+        raise Exception("No embedded preview image found in IDML container.")
+    raise Exception(f"Unsupported InDesign format: {ext}")
+
+def export_mesh_to_ascii_fbx(mesh, output_fbx_path):
+    import numpy as np
+    vertices = mesh.vertices.flatten().tolist()
+    faces = mesh.faces.tolist()
+
+    poly_indices = []
+    for face in faces:
+        for i, idx in enumerate(face):
+            if i == len(face) - 1:
+                poly_indices.append(-int(idx) - 1)
+            else:
+                poly_indices.append(int(idx))
+
+    v_str = ",".join(f"{val:.6f}" for val in vertices)
+    p_str = ",".join(str(idx) for idx in poly_indices)
+
+    num_verts = len(vertices)
+    num_indices = len(poly_indices)
+
+    fbx_content = f"""; FBX 7.4.0 project file
+FBXHeaderExtension:  {{
+	FBXHeaderVersion: 1003
+	FBXVersion: 7400
+}}
+
+Objects:  {{
+	Geometry: 1001, "Geometry::", "Mesh" {{
+		Vertices: *{num_verts} {{
+			a: {v_str}
+		}}
+		PolygonVertexIndex: *{num_indices} {{
+			a: {p_str}
+		}}
+		GeometryVersion: 124
+	}}
+	Model: 1002, "Model::Mesh", "Mesh" {{
+		Version: 232
+		Properties70:  {{
+			P: "InheritType", "enum", "", "",1
+		}}
+	}}
+}}
+
+Connections:  {{
+	C: "OO", 1001, 1002
+	C: "OO", 1002, 0
+}}
+"""
+    with open(output_fbx_path, 'w', encoding='utf-8') as f:
+        f.write(fbx_content)
+    return True
+
+def open_eps_preview(file_path):
+    import io
+    import struct
+    import re
+    from PIL import Image
+
+    # 1. Try standard Pillow / PyMuPDF opening first
+    try:
+        img = Image.open(file_path)
+        img.load()
+        return img
+    except Exception:
+        pass
+
+    try:
+        import fitz
+        doc = fitz.open(file_path)
+        if len(doc) > 0:
+            pix = doc[0].get_pixmap(matrix=fitz.Matrix(2, 2))
+            img_bytes = pix.tobytes("png")
+            doc.close()
+            return Image.open(io.BytesIO(img_bytes))
+    except Exception:
+        pass
+
+    # 2. Binary DOS EPS header extraction
+    with open(file_path, 'rb') as f:
+        header = f.read(30)
+        if len(header) >= 30 and header[:4] == b'\xC5\xD0\xD3\xC6':
+            ps_start, ps_len, wmf_start, wmf_len, tiff_start, tiff_len, checksum = struct.unpack('<IIIIIIH', header[4:30])
+            if tiff_len > 0:
+                f.seek(tiff_start)
+                tiff_data = f.read(tiff_len)
+                return Image.open(io.BytesIO(tiff_data))
+
+        # 3. Fallback: Search raw bytes for embedded TIFF / JPEG streams
+        f.seek(0)
+        data = f.read()
+
+        tiff_idx = data.find(b'II*\x00')
+        if tiff_idx == -1:
+            tiff_idx = data.find(b'MM\x00*')
+        if tiff_idx != -1:
+            try:
+                return Image.open(io.BytesIO(data[tiff_idx:]))
+            except Exception:
+                pass
+
+        jpeg_starts = [m.start() for m in re.finditer(b'\xFF\xD8\xFF', data)]
+        for start in jpeg_starts:
+            end = data.find(b'\xFF\xD9', start)
+            if end != -1:
+                try:
+                    return Image.open(io.BytesIO(data[start:end+2]))
+                except Exception:
+                    pass
+
+    raise Exception("Could not open EPS file or extract embedded preview.")
+
+def open_cdr_preview(file_path):
+    import io
+    import zipfile
+    import re
+    from PIL import Image
+
+    # 1. Try modern ZIP container (CorelDRAW X4+ / v14+)
+    try:
+        with zipfile.ZipFile(file_path, 'r') as z:
+            candidates = [
+                name for name in z.namelist()
+                if 'preview' in name.lower() or 'thumbnail' in name.lower() or name.lower().endswith(('.png', '.bmp', '.jpg', '.jpeg'))
+            ]
+            if candidates:
+                best_cand = max(candidates, key=lambda c: z.getinfo(c).file_size)
+                img_data = z.read(best_cand)
+                return Image.open(io.BytesIO(img_data))
+    except Exception:
+        pass
+
+    # 2. Search raw bytes for embedded PNG/JPEG/BMP streams in legacy RIFF/OLE CDR files
+    with open(file_path, 'rb') as f:
+        data = f.read()
+
+    png_idx = data.find(b'\x89PNG\r\n\x1a\n')
+    if png_idx != -1:
+        png_end = data.find(b'IEND\xaeB`\x82', png_idx)
+        if png_end != -1:
+            try:
+                return Image.open(io.BytesIO(data[png_idx:png_end+8]))
+            except Exception:
+                pass
+        else:
+            try:
+                return Image.open(io.BytesIO(data[png_idx:]))
+            except Exception:
+                pass
+
+    jpeg_starts = [m.start() for m in re.finditer(b'\xFF\xD8\xFF', data)]
+    for start in jpeg_starts:
+        end = data.find(b'\xFF\xD9', start)
+        if end != -1:
+            try:
+                return Image.open(io.BytesIO(data[start:end+2]))
+            except Exception:
+                pass
+
+    bmp_starts = [m.start() for m in re.finditer(b'BM', data)]
+    for start in bmp_starts:
+        if start + 14 <= len(data):
+            try:
+                return Image.open(io.BytesIO(data[start:start+500000]))
+            except Exception:
+                pass
+
+    raise Exception("Could not extract embedded preview image from CorelDRAW (.cdr) file.")
+
 def palmdoc_decompress(data):
     out = bytearray()
     i = 0
@@ -116,6 +320,30 @@ def extract_djvu_images(file_path):
         idx += 1
     return images
 
+def unpack_chm(file_path):
+    import subprocess
+    import tempfile
+    import shutil
+    import os
+    
+    temp_dir = tempfile.mkdtemp()
+    try:
+        res = subprocess.run(['hh.exe', '-decompile', temp_dir, file_path], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+        
+        html_content = []
+        for root, _, files in os.walk(temp_dir):
+            for f in sorted(files):
+                if f.lower().endswith(('.htm', '.html')):
+                    p = os.path.join(root, f)
+                    try:
+                        with open(p, 'r', encoding='utf-8', errors='ignore') as fp:
+                            html_content.append(fp.read())
+                    except Exception:
+                        pass
+        return "<html><body>" + "<hr>".join(html_content) + "</body></html>"
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
 def load_ebook_doc(input_path):
     import fitz
     ext = os.path.splitext(input_path)[1].lower()
@@ -127,7 +355,10 @@ def load_ebook_doc(input_path):
     except Exception:
         pass
 
-    if ext in ['.mobi', '.azw3', '.azw']:
+    if ext == '.chm':
+        html_str = unpack_chm(input_path)
+        return fitz.open(stream=html_str.encode('utf-8', errors='ignore'), filetype="html")
+    elif ext in ['.mobi', '.azw3', '.azw']:
         html_str = unpack_mobi_azw3(input_path)
         return fitz.open(stream=html_str.encode('utf-8'), filetype="html")
     elif ext == '.iba':
@@ -156,6 +387,35 @@ def load_ebook_doc(input_path):
             if len(doc) > 0:
                 return doc
         raise Exception("Could not parse DjVu document content.")
+
+    elif ext in ['.cbr', '.cbz', '.cb7', '.cbt']:
+        import tempfile
+        import shutil
+        temp_dir = tempfile.mkdtemp()
+        try:
+            unpack_archive(input_path, temp_dir)
+            image_files = []
+            for root, _, files in os.walk(temp_dir):
+                for f in files:
+                    if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.heic', '.heif')):
+                        image_files.append(os.path.join(root, f))
+            image_files.sort()
+            if not image_files:
+                raise Exception("No images found in comic archive.")
+                
+            doc = fitz.open()
+            for img_path in image_files:
+                img_doc = fitz.open(img_path)
+                pdf_bytes = img_doc.convert_to_pdf()
+                pdf_page = fitz.open("pdf", pdf_bytes)
+                doc.insert_pdf(pdf_page)
+                img_doc.close()
+                pdf_page.close()
+            return doc
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            
+    raise Exception(f"Unsupported eBook format: {ext}")
 def parse_dxf_facets(file_path):
     import trimesh
     vertices = []
@@ -765,8 +1025,17 @@ class ConversionJob:
             target_fmt = self.target_format.lower().strip()
             
             os.makedirs(self.output_dir, exist_ok=True)
+            input_ext = os.path.splitext(self.input_path)[1].lower()
+            if input_ext in ['.indd', '.idml']:
+                img = open_indesign_preview(self.input_path)
+            elif input_ext in ['.eps', '.ps']:
+                img = open_eps_preview(self.input_path)
+            elif input_ext == '.cdr':
+                img = open_cdr_preview(self.input_path)
+            else:
+                img = Image.open(self.input_path)
             
-            with Image.open(self.input_path) as img:
+            try:
                 # Handle alpha channel & mode conversions appropriately
                 if target_fmt in ['jpg', 'jpeg', 'bmp']:
                     # JPEG and BMP do not support alpha transparency or paletted modes directly
@@ -813,6 +1082,11 @@ class ConversionJob:
                         f.write(svg_content)
                 else:
                     img.save(self.output_path, format=pil_fmt)
+            finally:
+                try:
+                    img.close()
+                except Exception:
+                    pass
             self.status = "Completed"
             self.progress = 100
         except Exception as e:
@@ -873,7 +1147,7 @@ class ConversionJob:
                         if self.target_format == "mp3":
                             cmd.extend(["-id3v2_version", "3"])
                         has_art = True
-                    elif ext in ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'vro', 'dat', 'mpg', 'mpeg']:
+                    elif ext in ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'vro', 'dat', 'mpg', 'mpeg', 'm3u8', 'm3u', 'm4s']:
                         import tempfile
                         import hashlib
                         name_hash = hashlib.md5(self.input_path.encode()).hexdigest()
@@ -1071,6 +1345,30 @@ class ConversionJob:
                         data = list(data.values())[0]
                         if isinstance(data, dict) and len(data) == 1 and isinstance(list(data.values())[0], list):
                             data = list(data.values())[0]
+                elif ext_in == '.vcf':
+                    data = []
+                    current = {}
+                    for line in f:
+                        line = line.strip()
+                        if line == 'BEGIN:VCARD': current = {}
+                        elif line == 'END:VCARD': 
+                            if current: data.append(current)
+                        elif ':' in line:
+                            k, v = line.split(':', 1)
+                            k = k.split(';')[0].strip()
+                            if k and v.strip(): current[k] = v.strip()
+                elif ext_in == '.ics':
+                    data = []
+                    current = None
+                    for line in f:
+                        line = line.strip()
+                        if line == 'BEGIN:VEVENT': current = {}
+                        elif line == 'END:VEVENT':
+                            if current is not None: data.append(current); current = None
+                        elif current is not None and ':' in line:
+                            k, v = line.split(':', 1)
+                            k = k.split(';')[0].strip()
+                            if k and v.strip(): current[k] = v.strip()
             
             if data is None:
                 raise Exception(f"Unsupported input data format: {ext_in}")
@@ -1237,8 +1535,25 @@ class ConversionJob:
         try:
             import trimesh
             import tempfile
+            import shutil
+            from src.backend.assimp_manager import convert_with_assimp, get_assimp_export_id
             
             ext = os.path.splitext(self.input_path)[1].lower()
+            target_fmt = self.target_format.lower()
+            
+            # 1. Primary Engine: Assimp (Handles materials, binary FBX, and 40+ formats natively)
+            assimp_id = get_assimp_export_id(target_fmt)
+            if assimp_id:
+                try:
+                    convert_with_assimp(self.input_path, self.output_path, export_format_id=assimp_id)
+                    if os.path.exists(self.output_path):
+                        self.status = "Completed"
+                        self.progress = 100
+                        return
+                except Exception as e:
+                    print(f"Assimp direct conversion failed or unsupported input ({ext}): {e}. Falling back to legacy Trimesh pipeline.")
+            
+            # 2. Legacy Fallback Pipeline (Trimesh / FBX2glTF / OpenSCAD)
             working_input = self.input_path
             
             # If the input is FBX, we must first convert it to a temporary GLB using FBX2glTF
@@ -1269,6 +1584,36 @@ class ConversionJob:
                 working_input = temp_glb
                 self.temp_files_to_clean = getattr(self, 'temp_files_to_clean', [])
                 self.temp_files_to_clean.append(temp_glb)
+                
+            elif ext == '.scad':
+                import shutil
+                openscad_exe = shutil.which("openscad") or shutil.which("openscad.exe")
+                if not openscad_exe:
+                    raise Exception("OpenSCAD is required to convert .scad files. Please install OpenSCAD and ensure it is in your PATH.")
+                
+                temp_stl = os.path.join(tempfile.gettempdir(), f"temp_{os.path.basename(self.input_path)}.stl")
+                cmd = [openscad_exe, "-o", temp_stl, self.input_path]
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                if res.returncode != 0 or not os.path.exists(temp_stl):
+                    raise Exception(f"OpenSCAD failed: {res.stderr.decode('utf-8', errors='ignore')}")
+                
+                if self.target_format.lower() == 'stl':
+                    shutil.move(temp_stl, self.output_path)
+                    self.status = "Completed"
+                    self.progress = 100
+                    return
+                
+                working_input = temp_stl
+                self.temp_files_to_clean = getattr(self, 'temp_files_to_clean', [])
+                self.temp_files_to_clean.append(temp_stl)
+                
+            elif ext == '.dwf':
+                raise Exception("DWF parsing requires Autodesk Forge or a native DWF to DXF converter. Direct conversion is not supported natively.")
+                
+            elif ext == '.3ds':
+                raise Exception("Assimp failed to parse this 3DS file and there is no secondary fallback available.")
+
+
             
             # Load the mesh
             if ext in ['.dxf', '.dwg']:
@@ -1278,7 +1623,10 @@ class ConversionJob:
             else:
                 mesh = trimesh.load(working_input, force='mesh')
             
-            mesh.export(self.output_path)
+            if self.target_format.lower() == 'fbx':
+                export_mesh_to_ascii_fbx(mesh, self.output_path)
+            else:
+                mesh.export(self.output_path)
             
             self.status = "Completed"
             self.progress = 100
@@ -1311,9 +1659,32 @@ class ConversionJob:
             target = self.target_format.lower().strip()
             ext = os.path.splitext(self.input_path)[1].lower().strip('.')
             
+            # Handle EOT format conversion
+            if target == 'eot':
+                # EOT generally requires a TTF base
+                temp_ttf = self.output_path + ".ttf"
+                fontNumber = 0 if ext in ['dfont', 'ttc', 'otc'] else -1
+                font = TTFont(self.input_path, fontNumber=fontNumber)
+                font.flavor = None
+                font.save(temp_ttf)
+                font.close()
+                try:
+                    subprocess.run(['ttf2eot', temp_ttf, self.output_path], check=True, capture_output=True)
+                    os.remove(temp_ttf)
+                    self.status = "Completed"
+                    self.progress = 100
+                    return
+                except FileNotFoundError:
+                    os.remove(temp_ttf)
+                    raise Exception("ttf2eot utility is missing. Please install it (e.g. npm install -g ttf2eot)")
+                except subprocess.CalledProcessError as e:
+                    os.remove(temp_ttf)
+                    raise Exception(f"ttf2eot conversion failed: {e.stderr.decode()}")
+            
             # WOFF and WOFF2 conversions
             if target in ['woff', 'woff2']:
-                font = TTFont(self.input_path)
+                fontNumber = 0 if ext in ['dfont', 'ttc', 'otc'] else -1
+                font = TTFont(self.input_path, fontNumber=fontNumber)
                 font.flavor = target
                 font.save(self.output_path)
                 font.close()
@@ -1322,7 +1693,17 @@ class ConversionJob:
                 return
             
             # For converting TO TTF or OTF
-            font = TTFont(self.input_path)
+            fontNumber = 0 if ext in ['dfont', 'ttc', 'otc'] else -1
+            if ext == 'eot':
+                temp_ttf = self.input_path + ".ttf"
+                try:
+                    subprocess.run(['eot2ttf', self.input_path, temp_ttf], check=True, capture_output=True)
+                    font = TTFont(temp_ttf, fontNumber=-1)
+                    os.remove(temp_ttf)
+                except FileNotFoundError:
+                    raise Exception("eot2ttf utility is missing. Please install it (e.g. npm install -g eot2ttf)")
+            else:
+                font = TTFont(self.input_path, fontNumber=fontNumber)
             is_cff = 'CFF ' in font or font.sfntVersion == 'OTTO'
             font.close()
             
@@ -1414,6 +1795,26 @@ class ConversionJob:
         office2pdf_supported = ['.docx', '.xlsx', '.pptx']
         win32_err = ""
         
+        # Check for Apple iWork formats (Keynote, Pages, Numbers) which contain embedded PDFs
+        if ext in ['.key', '.pages', '.numbers']:
+            try:
+                import zipfile
+                with zipfile.ZipFile(self.input_path, 'r') as z:
+                    if 'QuickLook/Preview.pdf' in z.namelist():
+                        with z.open('QuickLook/Preview.pdf') as source, open(self.output_path, "wb") as target:
+                            target.write(source.read())
+                        self.status = "Completed"
+                        self.progress = 100
+                        return
+                    else:
+                        raise Exception(f"No embedded PDF preview found in {ext} file. Please save it with 'Include Preview' enabled in Apple iWork.")
+            except zipfile.BadZipFile:
+                pass # Not a standard modern iWork zip, fallback to failure
+            except Exception as e:
+                self.status = "Failed"
+                self.error_message = f"Apple iWork extraction failed: {str(e)}"
+                return
+
         # Tier 1: Try win32com (Microsoft Office)
         try:
             import win32com.client
@@ -1425,7 +1826,7 @@ class ConversionJob:
             abs_in = os.path.abspath(self.input_path)
             abs_out = os.path.abspath(self.output_path)
             
-            if ext in ['.doc', '.docx', '.docm', '.dot', '.dotx', '.dotm', '.rtf', '.txt', '.odt', '.mht', '.html', '.htm', '.xml']:
+            if ext in ['.doc', '.docx', '.docm', '.dot', '.dotx', '.dotm', '.rtf', '.txt', '.odt', '.mht', '.html', '.htm', '.xml', '.wpd', '.wps']:
                 word = win32com.client.Dispatch("Word.Application")
                 try:
                     doc = word.Documents.Open(abs_in)
@@ -1434,7 +1835,7 @@ class ConversionJob:
                 finally:
                     word.Quit()
                     
-            elif ext in ['.xls', '.xlsx', '.xlsm', '.xlsb', '.csv', '.ods']:
+            elif ext in ['.xls', '.xlsx', '.xlsm', '.xlsb', '.csv', '.ods', '.sxc']:
                 excel = win32com.client.Dispatch("Excel.Application")
                 try:
                     wb = excel.Workbooks.Open(abs_in)
@@ -1451,10 +1852,40 @@ class ConversionJob:
                     presentation.Close()
                 finally:
                     ppt.Quit()
+                    
+            elif ext in ['.vsd', '.vsdx']:
+                visio = win32com.client.Dispatch("Visio.Application")
+                visio.Visible = False
+                try:
+                    doc = visio.Documents.Open(abs_in)
+                    doc.ExportAsFixedFormat(1, abs_out, 1, 0) # visFixedFormatPDF
+                    doc.Close()
+                finally:
+                    visio.Quit()
+                    
+            elif ext == '.pub':
+                pub = win32com.client.Dispatch("Publisher.Application")
+                try:
+                    doc = pub.Open(abs_in)
+                    doc.ExportAsFixedFormat(2, abs_out) # pbFixedFormatTypePDF
+                    doc.Close()
+                finally:
+                    pub.Quit()
+                    
+            elif ext == '.mpp':
+                project = win32com.client.Dispatch("MSProject.Application")
+                project.Visible = False
+                try:
+                    project.FileOpen(abs_in)
+                    project.DocumentExport(abs_out, 2) # pjPDF
+                    project.FileClose(0) # pjDoNotSave
+                finally:
+                    project.Quit()
             
-            self.status = "Completed"
-            self.progress = 100
-            return
+            if os.path.exists(self.output_path):
+                self.status = "Completed"
+                self.progress = 100
+                return
             
         except ImportError:
             win32_err = "pywin32 not installed."
@@ -1467,35 +1898,188 @@ class ConversionJob:
             except:
                 pass
                 
-        # If we reach here, win32com failed.
-        # Tier 2: Try office2pdf fallback (modern formats only)
-        if ext not in office2pdf_supported:
-            self.status = "Failed"
-            self.error_message = f"Failed to convert format '{ext}'. Microsoft Office must be installed for this format. (Error: {win32_err})"
-            return
-            
+        # Tier 2: Try LibreOffice (headless) fallback
         try:
-            from src.backend.office2pdf_manager import get_office2pdf_exe
-            exe_path = get_office2pdf_exe()
-            if not exe_path:
-                raise Exception("office2pdf binary not found or could not be downloaded.")
-            
-            cmd = [exe_path, self.input_path, "-o", self.output_path]
-            
-            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
-            
-            if res.returncode == 0:
+            import shutil
+            soffice_exe = shutil.which("soffice") or shutil.which("soffice.exe") or shutil.which("libreoffice")
+            if not soffice_exe and os.name == 'nt':
+                for default_path in [
+                    r"C:\Program Files\LibreOffice\program\soffice.exe",
+                    r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"
+                ]:
+                    if os.path.exists(default_path):
+                        soffice_exe = default_path
+                        break
+            if soffice_exe:
+                cmd = [soffice_exe, "--headless", "--convert-to", "pdf", "--outdir", self.output_dir, self.input_path]
+                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                if res.returncode == 0 and os.path.exists(self.output_path):
+                    self.status = "Completed"
+                    self.progress = 100
+                    return
+        except Exception:
+            pass
+
+        # Tier 3: Try WPS Office (COM Automation) fallback
+        try:
+            import win32com.client
+            import pythoncom
+            pythoncom.CoInitialize()
+            abs_in = os.path.abspath(self.input_path)
+            abs_out = os.path.abspath(self.output_path)
+            wps_success = False
+
+            if ext in ['.doc', '.docx', '.docm', '.dot', '.dotx', '.dotm', '.rtf', '.txt', '.odt', '.mht', '.html', '.htm', '.xml', '.wpd', '.wps']:
+                for prog_id in ["Kwps.Application", "Wps.Application"]:
+                    try:
+                        wps = win32com.client.Dispatch(prog_id)
+                        doc = wps.Documents.Open(abs_in)
+                        doc.ExportAsFixedFormat(abs_out, 17) # 17 = wdFormatPDF
+                        doc.Close()
+                        wps.Quit()
+                        wps_success = True
+                        break
+                    except Exception:
+                        pass
+            elif ext in ['.xls', '.xlsx', '.xlsm', '.xlsb', '.csv', '.ods', '.sxc']:
+                for prog_id in ["Ket.Application", "Et.Application"]:
+                    try:
+                        et = win32com.client.Dispatch(prog_id)
+                        wb = et.Workbooks.Open(abs_in)
+                        wb.ExportAsFixedFormat(0, abs_out) # 0 = xlTypePDF
+                        wb.Close(False)
+                        et.Quit()
+                        wps_success = True
+                        break
+                    except Exception:
+                        pass
+            elif ext in ['.ppt', '.pptx', '.pptm', '.pps', '.odp']:
+                for prog_id in ["Kwpp.Application", "Wpp.Application"]:
+                    try:
+                        wpp = win32com.client.Dispatch(prog_id)
+                        presentation = wpp.Presentations.Open(abs_in, WithWindow=False)
+                        presentation.SaveAs(abs_out, 32) # 32 = ppSaveAsPDF
+                        presentation.Close()
+                        wpp.Quit()
+                        wps_success = True
+                        break
+                    except Exception:
+                        pass
+
+            if wps_success and os.path.exists(self.output_path):
                 self.status = "Completed"
                 self.progress = 100
-            else:
-                self.status = "Failed"
-                self.error_message = f"office2pdf failed with code {res.returncode}:\n{res.stdout.strip()[-100:]}"
-        except Exception as e:
-            self.status = "Failed"
-            self.error_message = f"MS Office failed ({win32_err}) and office2pdf failed ({str(e)})"
+                return
+        except Exception:
+            pass
+        finally:
+            try:
+                import pythoncom
+                pythoncom.CoUninitialize()
+            except Exception:
+                pass
+
+        # Tier 4: Try office2pdf fallback (modern formats only)
+        if ext in office2pdf_supported:
+            try:
+                from src.backend.office2pdf_manager import get_office2pdf_exe
+                exe_path = get_office2pdf_exe()
+                if exe_path:
+                    cmd = [exe_path, self.input_path, "-o", self.output_path]
+                    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                    if res.returncode == 0:
+                        self.status = "Completed"
+                        self.progress = 100
+                        return
+            except Exception:
+                pass
+
+        self.status = "Failed"
+        self.error_message = f"Failed to convert format '{ext}'. Microsoft Office, LibreOffice, or WPS Office is required. (Error: {win32_err})"
 
     def _convert_vector(self):
         try:
+            ext = os.path.splitext(self.input_path)[1].lower()
+            target_fmt = self.target_format.lower().strip()
+            image_formats = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'ico']
+
+            if ext == '.cdr':
+                # 1. Try LibreOffice CLI (libcdr)
+                try:
+                    import shutil
+                    soffice_exe = shutil.which("soffice") or shutil.which("soffice.exe") or shutil.which("libreoffice")
+                    if not soffice_exe and os.name == 'nt':
+                        for default_path in [
+                            r"C:\Program Files\LibreOffice\program\soffice.exe",
+                            r"C:\Program Files (x86)\LibreOffice\program\soffice.exe"
+                        ]:
+                            if os.path.exists(default_path):
+                                soffice_exe = default_path
+                                break
+                    if soffice_exe:
+                        cmd = [soffice_exe, "--headless", "--convert-to", target_fmt, "--outdir", self.output_dir, self.input_path]
+                        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                        if res.returncode == 0 and os.path.exists(self.output_path):
+                            self.status = "Completed"
+                            self.progress = 100
+                            return
+                except Exception:
+                    pass
+
+                # 2. Try Inkscape CLI
+                try:
+                    import shutil
+                    inkscape_exe = shutil.which("inkscape") or shutil.which("inkscape.exe")
+                    if not inkscape_exe and os.name == 'nt':
+                        for default_path in [
+                            r"C:\Program Files\Inkscape\bin\inkscape.exe",
+                            r"C:\Program Files\Inkscape\inkscape.exe"
+                        ]:
+                            if os.path.exists(default_path):
+                                inkscape_exe = default_path
+                                break
+                    if inkscape_exe:
+                        cmd = [inkscape_exe, self.input_path, f"--export-filename={self.output_path}"]
+                        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                        if res.returncode == 0 and os.path.exists(self.output_path):
+                            self.status = "Completed"
+                            self.progress = 100
+                            return
+                except Exception:
+                    pass
+
+                # 3. Fallback: Extract embedded preview image
+                img = open_cdr_preview(self.input_path)
+                if target_fmt in image_formats:
+                    if target_fmt in ['jpg', 'jpeg', 'bmp']:
+                        img = img.convert('RGB')
+                    elif target_fmt == 'png':
+                        img = img.convert('RGBA') if img.mode not in ('RGB', 'RGBA') else img
+                    elif target_fmt == 'ico':
+                        img.save(self.output_path, format='ICO', sizes=[(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)])
+                        self.status = "Completed"
+                        self.progress = 100
+                        return
+                    img.save(self.output_path)
+                elif target_fmt == 'pdf':
+                    img.convert('RGB').save(self.output_path, format='PDF')
+                elif target_fmt == 'svg':
+                    import base64
+                    import io
+                    buf = io.BytesIO()
+                    img.save(buf, format='PNG')
+                    b64_str = base64.b64encode(buf.getvalue()).decode('ascii')
+                    w, h = img.size
+                    svg_content = f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}" viewBox="0 0 {w} {h}"><image width="{w}" height="{h}" href="data:image/png;base64,{b64_str}"/></svg>'
+                    with open(self.output_path, 'w', encoding='utf-8') as f:
+                        f.write(svg_content)
+                else:
+                    img.save(self.output_path)
+
+                self.status = "Completed"
+                self.progress = 100
+                return
+
             import fitz  # PyMuPDF
             target_fmt = self.target_format.lower().strip()
             image_formats = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'ico']
@@ -1566,23 +2150,31 @@ class ConversionJob:
         os.makedirs(self.output_dir, exist_ok=True)
         
         ext = os.path.splitext(self.input_path)[1].lower()
-        image_formats = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.heic', '.heif', '.psd', '.ico']
-        vector_formats = ['.svg']
-        data_formats = ['.json', '.csv', '.xml', '.yaml', '.yml']
+        image_formats = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.heic', '.heif', '.psd', '.ico', '.indd', '.idml', '.eps', '.ps', '.cdr', '.tga', '.pcx', '.pbm', '.pgm', '.ppm', '.exr', '.dpx', '.raf', '.pef']
+        vector_formats = ['.svg', '.ai', '.cdr', '.xps', '.oxps']
+        data_formats = ['.json', '.csv', '.xml', '.yaml', '.yml', '.vcf', '.ics']
         markup_formats = ['.md', '.html', '.htm', '.rtf', '.txt', '.log']
         doc_formats = [
-            '.doc', '.docx', '.docm', '.dot', '.dotx', '.dotm', '.rtf', '.txt', '.log', '.odt', '.mht', '.html', '.htm', '.xml',
-            '.xls', '.xlsx', '.xlsm', '.xlsb', '.csv', '.ods',
-            '.ppt', '.pptx', '.pptm', '.pps', '.odp'
+            '.doc', '.docx', '.docm', '.dot', '.dotx', '.dotm', '.rtf', '.txt', '.log', '.odt', '.mht', '.html', '.htm', '.xml', '.wpd', '.wps',
+            '.xls', '.xlsx', '.xlsm', '.xlsb', '.csv', '.ods', '.sxc',
+            '.ppt', '.pptx', '.pptm', '.pps', '.odp',
+            '.key', '.pages', '.numbers',
+            '.vsd', '.vsdx', '.pub', '.mpp'
         ]
         
-        ebook_formats = ['.pdf', '.epub', '.mobi', '.azw3', '.azw', '.iba', '.djvu', '.djv']
-        model3d_formats = ['.obj', '.stl', '.ply', '.glb', '.gltf', '.off', '.dae', '.fbx', '.step', '.stp', '.iges', '.igs', '.dxf', '.dwg', '.3mf']
+        ebook_formats = ['.pdf', '.epub', '.mobi', '.azw3', '.azw', '.iba', '.djvu', '.djv', '.cbr', '.cbz', '.cb7', '.cbt', '.chm']
+        model3d_formats = [
+            '.obj', '.stl', '.ply', '.glb', '.gltf', '.off', '.dae', '.fbx', 
+            '.step', '.stp', '.iges', '.igs', '.dxf', '.dwg', '.3mf', '.scad', '.dwf', '.3ds',
+            '.blend', '.x', '.lwo', '.lws', '.md5mesh', '.smd', '.vta', '.ogex', '.3d', '.b3d',
+            '.q3d', '.q3s', '.nff', '.ter', '.mdl', '.xml', '.ifc', '.x3d', '.x3db', '.csm',
+            '.bvh', '.ase', '.cob', '.scn', '.ac', '.ms3d', '.mqo', '.ndo', '.irr', '.irrmesh', '.pmx'
+        ]
         subtitle_formats = ['.srt', '.vtt', '.ass', '.ssa', '.sub', '.scc']
-        font_formats = ['.ttf', '.otf', '.woff', '.woff2']
+        font_formats = ['.ttf', '.otf', '.woff', '.woff2', '.eot', '.dfont']
         database_formats = ['.sql', '.db', '.sqlite', '.sqlite3', '.mdb', '.accdb']
         gis_formats = ['.geojson', '.kml', '.kmz', '.gpx', '.shp']
-        archive_formats = ['.zip', '.rar', '.7z', '.tar', '.gz', '.tgz', '.bz2', '.tbz2', '.xz', '.txz', '.iso', '.img']
+        archive_formats = ['.zip', '.rar', '.7z', '.tar', '.gz', '.tgz', '.bz2', '.tbz2', '.xz', '.txz', '.iso', '.img', '.cab']
         
         print(f"[CONVERT] input: {self.input_path}")
         print(f"[CONVERT] target_format: {self.target_format}")
