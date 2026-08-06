@@ -46,6 +46,13 @@ def main(page: ft.Page):
     if is_ffmpeg_available():
         main_view = MainView(page)
         page.add(main_view)
+        # Hook windnd for native Windows drag-and-drop (works in both dev and compiled)
+        import threading
+        def _hook_dnd():
+            import time
+            time.sleep(0.8)  # Wait for Flet window to fully appear
+            main_view._setup_dnd()
+        threading.Thread(target=_hook_dnd, daemon=True).start()
     else:
         # ── First-time setup screen ───────────────────────────────
         progress_bar = ft.ProgressBar(

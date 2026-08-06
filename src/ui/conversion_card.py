@@ -170,6 +170,42 @@ FORMAT_GROUPS = {
     'vector': ['svg', 'ai', 'eps', 'ps', 'cdr', 'xps', 'oxps'],
 }
 
+FORMAT_DIVISIONS = {
+    # Audio divisions
+    'flac': 'Lossless', 'wav': 'Lossless', 'alac': 'Lossless', 'aiff': 'Lossless',
+    'mp3': 'Lossy', 'm4a': 'Lossy', 'aac': 'Lossy', 'ogg': 'Lossy', 'wma': 'Lossy',
+    'ac3': 'Lossy', 'eac3': 'Lossy', 'dts': 'Lossy', 'amr': 'Lossy', 'opus': 'Lossy',
+
+    # Image divisions
+    'png': 'Lossless', 'jpg': 'Lossy', 'jpeg': 'Lossy', 'webp': 'Web',
+    'gif': 'Animated', 'bmp': 'Uncompressed', 'ico': 'Icons', 'svg': 'Vector',
+    'heic': 'Mobile', 'heif': 'Mobile', 'tiff': 'Pro & RAW', 'tif': 'Pro & RAW',
+    'psd': 'Pro & RAW', 'raw': 'Pro & RAW', 'dng': 'Pro & RAW', 'avif': 'Web',
+    'jxl': 'Web', 'tga': 'Pro & RAW', 'exr': 'Pro & RAW',
+
+    # Video divisions
+    'mp4': 'Standard', 'mkv': 'Standard', 'webm': 'Web', 'mov': 'Standard',
+    'avi': 'Legacy', 'flv': 'Web', 'mxf': 'Broadcast', 'mts': 'Broadcast',
+    'm2ts': 'Broadcast', 'ts': 'Broadcast', 'vob': 'Broadcast', 'wmv': 'Legacy',
+    '3gp': 'Mobile', '3g2': 'Mobile',
+
+    # Document & E-book divisions
+    'pdf': 'Document', 'epub': 'E-Book', 'mobi': 'E-Book', 'azw3': 'E-Book',
+    'doc': 'Office', 'docx': 'Office', 'xls': 'Spreadsheet', 'xlsx': 'Spreadsheet',
+    'ppt': 'Presentation', 'pptx': 'Presentation', 'txt': 'Text', 'md': 'Text',
+
+    # Data & Database divisions
+    'json': 'Data', 'yaml': 'Data', 'yml': 'Data', 'csv': 'Data', 'xml': 'Data',
+    'sql': 'Database', 'sqlite': 'Database', 'db': 'Database',
+
+    # 3D divisions
+    'glb': 'Web 3D', 'gltf': 'Web 3D', 'obj': 'Mesh', 'stl': '3D Print',
+    'ply': 'Mesh', 'fbx': 'Exchange', 'step': 'CAD', 'stp': 'CAD', 'iges': 'CAD',
+
+    # Archives divisions
+    'zip': 'Archive', '7z': 'Archive', 'tar': 'Archive', 'folder': 'Folder'
+}
+
 def _get_format_group(ext: str) -> str:
     ext = ext.lstrip('.')
     for group, fmts in FORMAT_GROUPS.items():
@@ -266,27 +302,24 @@ class ConversionCard(ft.Container):
                 default = 'jpg' if self.ext == 'png' else 'png'
 
         self.job.target_format = self.job.target_format or default
+        self.target_opts = target_opts
 
         icon_name, icon_color = FILE_TYPE_MAP.get(self.ext, (ft.Icons.INSERT_DRIVE_FILE, AppTheme.TEXT_SECONDARY))
 
-        # ── Format dropdown ──────────────────────────────────────
-        self.target_dropdown = ft.Dropdown(
-            options=[ft.dropdown.Option(f) for f in target_opts],
-            value=self.job.target_format,
-            width=110,
-            border_color=AppTheme.BORDER,
+        # ── Format Selector Button ──────────────────────────────────────
+        self.target_btn = ft.Container(
+            content=ft.Row([
+                ft.Text(self.job.target_format.upper(), size=13, weight=ft.FontWeight.W_700, color=AppTheme.TEXT_PRIMARY),
+                ft.Icon(ft.Icons.KEYBOARD_ARROW_DOWN, size=16, color=AppTheme.TEXT_SECONDARY)
+            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, spacing=4),
             bgcolor=AppTheme.SURFACE_3,
-            color=AppTheme.TEXT_PRIMARY,
-            text_size=13,
-            content_padding=ft.Padding(left=10, right=4, top=6, bottom=6),
-            dense=True,
             border_radius=8,
-            focused_border_color=AppTheme.PRIMARY,
+            border=ft.Border.all(1, AppTheme.BORDER),
+            padding=ft.Padding(left=12, right=8, top=6, bottom=6),
+            ink=True,
+            on_click=self._open_format_picker,
+            width=110,
         )
-        # Set both on_change and on_select for compatibility across Flet versions
-        self.target_dropdown.on_change = self.on_format_change
-        if hasattr(self.target_dropdown, 'on_select'):
-            self.target_dropdown.on_select = self.on_format_change
 
         # ── Status / progress ─────────────────────────────────────
         self.status_badge = ft.Container(
@@ -391,7 +424,7 @@ class ConversionCard(ft.Container):
         convert_section = ft.Row([
             ext_badge,
             self.arrow_icon,
-            self.target_dropdown,
+            self.target_btn,
         ], spacing=8, vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
         # ── Progress row ─────────────────────────────────────────
@@ -520,12 +553,207 @@ class ConversionCard(ft.Container):
                 ft.Text(f"Out: {out_str}", color=AppTheme.SUCCESS, size=11, weight=ft.FontWeight.W_700),
             ]
 
-    def on_format_change(self, e):
-        # Use e.control.value — works in both on_change and on_select handlers
-        new_fmt = (e.control.value or "").strip().lower()
+    def _open_format_picker(self, e):
+        from collections import defaultdict
+        groups = defaultdict(list)
+        for fmt in self.target_opts:
+            if self.src_group == 'video' and fmt in ['mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg']:
+                div = 'Audio Extract'
+            else:
+                div = FORMAT_DIVISIONS.get(fmt) or _get_format_group(fmt).capitalize()
+            groups[div].append(fmt)
+
+        tabs_list = []
+        tab_contents = []
+
+        self.formats_scroll_offset = 0
+
+        def create_format_grid(formats):
+            row = ft.Row(
+                spacing=12,
+                scroll=ft.ScrollMode.HIDDEN,
+                on_scroll=lambda e: setattr(self, 'formats_scroll_offset', e.extent_before)
+            )
+            row.controls.append(ft.Container(width=12)) # Left edge spacer
+            for f in formats:
+                icon_name, icon_color = FILE_TYPE_MAP.get(f, (ft.Icons.INSERT_DRIVE_FILE, AppTheme.TEXT_SECONDARY))
+                btn = ft.Container(
+                    content=ft.Column([
+                        ft.Icon(icon_name, size=24, color=AppTheme.PRIMARY),
+                        ft.Text(f.upper(), size=12, weight=ft.FontWeight.W_700, color=AppTheme.TEXT_PRIMARY)
+                    ], alignment=ft.MainAxisAlignment.CENTER, horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=4),
+                    bgcolor=AppTheme.SURFACE_2,
+                    border=ft.Border.all(1, AppTheme.BORDER),
+                    border_radius=12,
+                    ink=True,
+                    padding=8,
+                    width=72,
+                    height=72,
+                    on_click=lambda e, fmt=f: self._select_format(fmt)
+                )
+                row.controls.append(btn)
+            row.controls.append(ft.Container(width=12)) # Right edge spacer
+            return row
+
+        tab_names = ["All"]
+        tab_contents = [create_format_grid(self.target_opts)]
+        
+        if len(groups) > 0:
+            for group, fmts in groups.items():
+                if len(fmts) > 0 and (len(groups) > 1 or group != "All"):
+                    tab_names.append(group)
+                    tab_contents.append(create_format_grid(fmts))
+
+        selected_index = [0]
+        tabs_row = ft.Row(spacing=8, scroll=ft.ScrollMode.HIDDEN)
+        
+        content_container = ft.Container(
+            content=tab_contents[0],
+            expand=True,
+            padding=ft.Padding(0, 16, 0, 16)
+        )
+        
+        def _on_tab_click(idx):
+            selected_index[0] = idx
+            for i, name in enumerate(tab_names):
+                btn = tabs_row.controls[i + 1] # skip left spacer
+                is_selected = (i == selected_index[0])
+                btn.bgcolor = AppTheme.PRIMARY if is_selected else AppTheme.SURFACE_3
+                btn.content.color = "#ffffff" if is_selected else AppTheme.TEXT_SECONDARY
+            tabs_row.update()
+            content_container.content = tab_contents[idx]
+            content_container.update()
+            
+        for i, name in enumerate(tab_names):
+            if i == 0:
+                tabs_row.controls.append(ft.Container(width=12)) # Left spacer
+            is_selected = (i == 0)
+            tabs_row.controls.append(
+                ft.Container(
+                    content=ft.Text(name, size=13, weight=ft.FontWeight.W_600, color="#ffffff" if is_selected else AppTheme.TEXT_SECONDARY),
+                    bgcolor=AppTheme.PRIMARY if is_selected else AppTheme.SURFACE_3,
+                    padding=ft.Padding(16, 6, 16, 6),
+                    border_radius=16,
+                    ink=True,
+                    on_click=lambda e, idx=i: _on_tab_click(idx)
+                )
+            )
+            if i == len(tab_names) - 1:
+                tabs_row.controls.append(ft.Container(width=12)) # Right spacer
+
+        format_rows = tab_contents  # keep reference for async scroll
+
+        async def scroll_formats(e, delta):
+            current_row = content_container.content
+            if hasattr(current_row, "scroll_to"):
+                self.formats_scroll_offset = max(0, self.formats_scroll_offset + delta)
+                await current_row.scroll_to(offset=self.formats_scroll_offset, duration=200, curve=ft.AnimationCurve.EASE_OUT)
+
+        async def scroll_left(e):
+            await scroll_formats(e, -300)
+
+        async def scroll_right(e):
+            await scroll_formats(e, 300)
+
+        async def on_wheel_scroll(e: ft.ScrollEvent):
+            # e.scroll_delta_y: negative = scroll up/left, positive = down/right
+            await scroll_formats(e, e.scroll_delta.y * 40)
+
+        scrollable_area = ft.GestureDetector(
+            content=content_container,
+            on_scroll=on_wheel_scroll,
+            expand=True,
+        )
+
+        arrow_style = ft.ButtonStyle(
+            bgcolor={
+                ft.ControlState.DEFAULT: AppTheme.SURFACE_2,
+                ft.ControlState.HOVERED: f"#40{AppTheme.PRIMARY[1:]}",
+            },
+            shape=ft.CircleBorder(),
+            padding=6,
+        )
+
+        scroll_btn_left = ft.IconButton(
+            icon=ft.Icons.ARROW_BACK_IOS_NEW_ROUNDED,
+            on_click=scroll_left,
+            icon_color=AppTheme.TEXT_PRIMARY,
+            icon_size=14,
+            style=arrow_style,
+            tooltip="Scroll Left",
+            width=32,
+            height=32,
+        )
+        scroll_btn_right = ft.IconButton(
+            icon=ft.Icons.ARROW_FORWARD_IOS_ROUNDED,
+            on_click=scroll_right,
+            icon_color=AppTheme.TEXT_PRIMARY,
+            icon_size=14,
+            style=arrow_style,
+            tooltip="Scroll Right",
+            width=32,
+            height=32,
+        )
+        
+        tabs_and_arrows = ft.Row([
+            ft.Container(content=tabs_row, expand=True),
+            ft.Row([scroll_btn_left, scroll_btn_right], spacing=8)
+        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+
+        sheet_content = ft.Container(
+            width=9999, # force edge-to-edge
+            content=ft.Column([
+                ft.Container(
+                    content=ft.Row([
+                        ft.Text("Select Output Format", size=18, weight=ft.FontWeight.W_800, color=AppTheme.TEXT_PRIMARY),
+                        ft.IconButton(icon=ft.Icons.CLOSE, on_click=lambda e: self._close_picker(), icon_size=18)
+                    ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                    padding=ft.Padding(24, 16, 24, 0)
+                ),
+                ft.Container(content=tabs_and_arrows, padding=ft.Padding(0, 0, 24, 0)),
+                scrollable_area
+            ], spacing=0),
+            padding=0,
+            height=200,
+            bgcolor=AppTheme.SURFACE,
+        )
+
+        self.bottom_sheet = ft.AlertDialog(
+            content=sheet_content,
+            content_padding=0,
+            inset_padding=0,
+            alignment=ft.alignment.Alignment(0, 1),
+            bgcolor=ft.Colors.TRANSPARENT,
+            open=True,
+            on_dismiss=lambda e: setattr(self, 'bottom_sheet', None)
+        )
+        self.page.overlay.append(self.bottom_sheet)
+        self.page.update()
+
+    def _close_picker(self):
+        if hasattr(self, 'bottom_sheet') and self.bottom_sheet:
+            self.bottom_sheet.open = False
+            self.bottom_sheet.update()
+
+    def _select_format(self, fmt):
+        self.job.target_format = fmt
+        self.target_btn.content.controls[0].value = fmt.upper()
+        self.target_btn.update()
+        self.on_format_change(fmt)
+        self._close_picker()
+
+    def on_format_change(self, fmt: str):
+        new_fmt = fmt.strip().lower()
         print(f"[FORMAT_CHANGE] {self.filename}: {self.job.target_format} -> {new_fmt!r}")
         if not new_fmt:
             return
+
+        if self.job.status in ["Completed", "Failed"]:
+            self.job.status = "Pending"
+            self.job.progress = 0
+            self._recorded = False
+            self.update_status()
+
         self.job.target_format = new_fmt
         name_no_ext = os.path.splitext(self.filename)[0]
         self.job.output_path = os.path.join(
@@ -578,10 +806,10 @@ class ConversionCard(ft.Container):
             self.on_status_change()
 
     def refresh_colors(self):
-        self.target_dropdown.border_color = AppTheme.BORDER
-        self.target_dropdown.bgcolor = AppTheme.SURFACE_3
-        self.target_dropdown.color = AppTheme.TEXT_PRIMARY
-        self.target_dropdown.focused_border_color = AppTheme.PRIMARY
+        self.target_btn.border = ft.Border.all(1, AppTheme.BORDER)
+        self.target_btn.bgcolor = AppTheme.SURFACE_3
+        self.target_btn.content.controls[0].color = AppTheme.TEXT_PRIMARY
+        self.target_btn.content.controls[1].color = AppTheme.TEXT_SECONDARY
         
         self.file_name_text.color = AppTheme.TEXT_PRIMARY
         self.file_path_text.color = AppTheme.TEXT_MUTED

@@ -13,10 +13,11 @@ def _dbg(msg):
     print(msg, flush=True)
 
 class SettingsView(ft.Container):
-    def __init__(self, page: ft.Page):
+    def __init__(self, page: ft.Page, on_back=None):
         super().__init__()
         self.main_page = page
         self.settings = SettingsManager()
+        self.on_back = on_back
         self.expand = True
         self.scroll_col = None  # persists across theme changes to preserve scroll position
         self.build_ui()
@@ -56,7 +57,7 @@ class SettingsView(ft.Container):
                 self._build_dropdown(
                     "Default Video Codec",
                     "default_video_codec",
-                    [("H.264 (Compatible)", "h264"), ("H.265 (High Efficiency)", "hevc"), ("Copy (Fast)", "copy")]
+                    [("H.264 (Compatible)", "h264"), ("H.265 (High Efficiency)", "hevc"), ("Default (Fast)", "copy")]
                 ),
                 self._build_dropdown(
                     "Video Preset (Speed/Quality)",
@@ -74,7 +75,7 @@ class SettingsView(ft.Container):
                 self._build_dropdown(
                     "Default Audio Codec",
                     "default_audio_codec",
-                    [("AAC", "aac"), ("MP3", "mp3"), ("Copy", "copy")]
+                    [("AAC", "aac"), ("MP3", "mp3"), ("Default (Fast)", "copy")]
                 ),
                 self._build_dropdown(
                     "Audio Bitrate",
@@ -107,33 +108,53 @@ class SettingsView(ft.Container):
         # Scrollable list of sections
         inner_container = ft.Container(
             content=ft.Column(
-                [general_section, video_section, audio_section, appearance_section],
+                [general_section, appearance_section, video_section, audio_section],
                 spacing=20
             ),
-            padding=ft.Padding(right=16, left=0, top=0, bottom=20)
+            padding=ft.Padding(right=16, left=0, top=0, bottom=0)
         )
 
         if self.scroll_col is None:
             # First build — create the scroll column
-            self.header = ft.Text("Settings", size=26, weight=ft.FontWeight.W_800, color=AppTheme.TEXT_PRIMARY)
+            title_text = ft.Text("Settings", size=26, weight=ft.FontWeight.W_800, color=AppTheme.TEXT_PRIMARY)
+            if self.on_back:
+                self.header = ft.Row([
+                    title_text,
+                    ft.IconButton(
+                        icon=ft.Icons.CLOSE,
+                        icon_color=AppTheme.TEXT_PRIMARY,
+                        tooltip="Close Settings",
+                        on_click=lambda e: self.on_back()
+                    )
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+            else:
+                self.header = None
+
             self.scroll_col = ft.Column(
                 [inner_container],
                 scroll=ft.ScrollMode.AUTO,
                 expand=True,
             )
+            
+            controls = []
+            if self.header:
+                controls.extend([self.header, ft.Container(height=20)])
+            controls.append(self.scroll_col)
+            
             self.content = ft.Column(
-                [
-                    self.header,
-                    ft.Container(height=20),
-                    self.scroll_col,
-                ],
+                controls,
                 spacing=0,
                 expand=True
             )
         else:
             # Theme change — only swap inner content; scroll col (and its position) stays alive
             self.scroll_col.controls[0] = inner_container
-            self.header.color = AppTheme.TEXT_PRIMARY
+            if self.header is not None:
+                if isinstance(self.header, ft.Row):
+                    self.header.controls[0].color = AppTheme.TEXT_PRIMARY
+                    self.header.controls[1].icon_color = AppTheme.TEXT_PRIMARY
+                else:
+                    self.header.color = AppTheme.TEXT_PRIMARY
 
 
     def _build_section(self, title: str, icon: str, controls: list) -> ft.Container:

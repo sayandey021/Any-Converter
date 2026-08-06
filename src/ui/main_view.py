@@ -105,6 +105,22 @@ class MainView(ft.Container):
             expand=True,
         )
 
+        # ── Add Files button (shown when dropzone is hidden) ──────
+        self.add_files_btn = ft.ElevatedButton(
+            content=ft.Row([
+                ft.Icon(ft.Icons.ADD, color=AppTheme.PRIMARY, size=18),
+                ft.Text("Add More Files", color=AppTheme.PRIMARY, weight=ft.FontWeight.W_700, size=14),
+            ], tight=True, spacing=6),
+            style=ft.ButtonStyle(
+                bgcolor=AppTheme.SURFACE_2,
+                shape=ft.RoundedRectangleBorder(radius=10),
+                padding=ft.Padding(left=20, right=20, top=12, bottom=12),
+                elevation=0,
+            ),
+            on_click=self._open_picker,
+            visible=False,
+        )
+
         # ── Views ─────────────────────────────────────────────────
         self.convert_view = ft.Column([
             # Top bar
@@ -112,7 +128,6 @@ class MainView(ft.Container):
             ft.Container(height=20),
             # Drop zone
             self.dropzone,
-            ft.Container(height=20),
             # Queue header
             self.queue_section,
             # Queue body (expands)
@@ -120,6 +135,12 @@ class MainView(ft.Container):
                 content=self.list_view,
                 expand=True,
             ),
+            # Add files button at bottom
+            ft.Container(
+                content=self.add_files_btn,
+                alignment=ft.alignment.Alignment(0, 0),
+                padding=ft.Padding(0, 16, 0, 0)
+            )
         ], spacing=0, expand=True)
 
         self._history_view = None
@@ -132,26 +153,43 @@ class MainView(ft.Container):
             padding=ft.Padding(left=28, right=28, top=24, bottom=24),
         )
 
-        # ── Sidebar (left) ─────────────────────────────────────────
-        self.sidebar_container = self._build_sidebar()
-        self.root_divider = ft.VerticalDivider(width=1, color=AppTheme.BORDER)
-
         # ── Root layout ───────────────────────────────────────────
         self.content = ft.Row([
-            self.sidebar_container,
-            self.root_divider,
             self.main_content_container,
         ], spacing=0, expand=True)
+
+        # Pre-initialize settings and about view dialog so tab switching is instantaneous
+        self._init_settings_dialog()
 
     # ─────────────────────────────────────────────────────────────
     # Builder helpers
     # ─────────────────────────────────────────────────────────────
+
+    def _create_topbar_btn(self, icon, label, active=False):
+        color = AppTheme.PRIMARY if active else AppTheme.TEXT_SECONDARY
+        bg = AppTheme.SURFACE_VARIANT if active else ft.Colors.TRANSPARENT
+        return ft.IconButton(
+            icon=icon,
+            icon_color=color,
+            bgcolor=bg,
+            tooltip=label,
+            on_click=lambda e, l=label: self._switch_tab(l)
+        )
 
     def _build_topbar(self) -> ft.Control:
         supported_text = ft.Text(
             "Fast, offline file converter for media, documents, 3D models & more",
             size=12, color=AppTheme.TEXT_MUTED,
         )
+        
+        self.nav_history = self._create_topbar_btn(ft.Icons.HISTORY, "History", False)
+        self.nav_settings = self._create_topbar_btn(ft.Icons.SETTINGS_OUTLINED, "Settings", False)
+
+        nav_row = ft.Row([
+            self.nav_history,
+            self.nav_settings,
+        ], spacing=8)
+
         return ft.Column([
             ft.Row([
                 ft.Column([
@@ -159,96 +197,11 @@ class MainView(ft.Container):
                             color=AppTheme.TEXT_PRIMARY),
                     supported_text,
                 ], spacing=3),
+                nav_row,
             ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
         ], spacing=0)
 
-    def _create_nav_item(self, icon, label, active=False):
-        color = AppTheme.PRIMARY if active else AppTheme.TEXT_SECONDARY
-        bg = AppTheme.SURFACE_VARIANT if active else ft.Colors.TRANSPARENT
-        return ft.Container(
-            content=ft.Row([
-                ft.Icon(icon, color=color, size=18),
-                ft.Text(label, color=color, size=13, weight=ft.FontWeight.W_600 if active else ft.FontWeight.NORMAL),
-            ], spacing=10),
-            bgcolor=bg,
-            border_radius=10,
-            padding=ft.Padding(left=14, right=14, top=10, bottom=10),
-            ink=True,
-            on_click=lambda e, l=label: self._switch_tab(l)
-        )
 
-    def _build_sidebar(self) -> ft.Control:
-        logo_section = ft.Container(
-            content=ft.Row([
-                ft.Container(
-                    content=ft.Image(
-                        src="icon.png",
-                        width=36,
-                        height=36,
-                        fit=ft.BoxFit.CONTAIN,
-                        border_radius=10,
-                    ),
-                    width=36, height=36,
-                    border_radius=10,
-                    alignment=ft.Alignment(0, 0),
-                ),
-                ft.Text("AnyConv", size=16, weight=ft.FontWeight.W_800,
-                        color=AppTheme.TEXT_PRIMARY),
-            ], spacing=10),
-            padding=ft.Padding(left=16, right=16, top=20, bottom=16),
-        )
-
-        self.nav_convert = self._create_nav_item(ft.Icons.SWAP_HORIZ_ROUNDED, "Convert", True)
-        self.nav_history = self._create_nav_item(ft.Icons.HISTORY, "History", False)
-        self.nav_settings = self._create_nav_item(ft.Icons.SETTINGS_OUTLINED, "Settings", False)
-        self.nav_about = self._create_nav_item(ft.Icons.INFO_OUTLINED, "About", False)
-
-        nav_items = ft.Column([
-            self.nav_convert,
-            self.nav_history,
-            self.nav_settings,
-            self.nav_about,
-        ], spacing=4)
-
-        self.stat_converted_text = ft.Text("0 files", color=AppTheme.TEXT_SECONDARY, size=12, weight=ft.FontWeight.W_600)
-        self.stat_queue_text = ft.Text("0 files", color=AppTheme.TEXT_SECONDARY, size=12, weight=ft.FontWeight.W_600)
-
-        # Stats section
-        stats = ft.Container(
-            content=ft.Column([
-                ft.Divider(color=AppTheme.BORDER, height=1),
-                ft.Container(height=12),
-                ft.Text("Session Stats", size=11, color=AppTheme.TEXT_MUTED,
-                         weight=ft.FontWeight.W_600),
-                ft.Container(height=8),
-                self._stat_row(ft.Icons.CHECK_CIRCLE_OUTLINE, "Converted", self.stat_converted_text),
-                ft.Container(height=6),
-                self._stat_row(ft.Icons.BOLT, "In Queue", self.stat_queue_text),
-            ], spacing=0),
-            padding=ft.Padding(left=16, right=16, top=0, bottom=16),
-        )
-
-        return ft.Container(
-            content=ft.Column([
-                logo_section,
-                ft.Container(
-                    content=nav_items,
-                    padding=ft.Padding(left=8, right=8, top=0, bottom=0),
-                ),
-                ft.Container(expand=True),
-                stats,
-            ], spacing=0, expand=True),
-            width=200,
-            bgcolor=AppTheme.SURFACE,
-        )
-
-    def _stat_row(self, icon, label, value_control):
-        return ft.Row([
-            ft.Icon(icon, color=AppTheme.TEXT_MUTED, size=14),
-            ft.Text(label, color=AppTheme.TEXT_MUTED, size=12),
-            ft.Container(expand=True),
-            value_control,
-        ], spacing=6)
 
     def _build_dropzone(self) -> ft.Container:
         self._dz_icon = ft.Icon(ft.Icons.CLOUD_UPLOAD_OUTLINED, size=52, color=AppTheme.PRIMARY)
@@ -301,25 +254,114 @@ class MainView(ft.Container):
         # Native Flet client does not support flet_dropzone (requires custom compiled Flutter client)
         return dz
 
+    def _setup_dnd(self):
+        """
+        Register an IDropTarget COM object on the Flutter window.
+        This is the correct, modern Windows drag-and-drop mechanism.
+        Works with Flutter windows because it operates at the COM/OLE level,
+        independent of how the window processes Win32 messages.
+        """
+        import threading
+
+        def _register():
+            try:
+                import pythoncom
+                import win32gui
+                import win32con
+                from win32com.shell import shell, shellcon
+                from win32com.server.util import wrap
+                import ctypes
+
+                pythoncom.OleInitialize()
+
+                user32 = ctypes.windll.user32
+                title = self.main_page.title
+                hwnd = user32.FindWindowW(None, title)
+                if not hwnd:
+                    print("[DnD] Window not found:", title)
+                    return
+
+                # Find child windows too — FLUTTERVIEW is the actual rendering surface
+                child_hwnds = []
+                def collect(child, _):
+                    child_hwnds.append(child)
+                    return True
+                EnumChildProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+                user32.EnumChildWindows(hwnd, EnumChildProc(collect), 0)
+                all_hwnds = [hwnd] + child_hwnds
+                print(f"[DnD] Found {len(all_hwnds)} window(s): {all_hwnds}")
+
+                # Bind self into the COM class
+                main_view = self
+
+                class BoundFileDropTarget:
+                    _com_interfaces_ = [pythoncom.IID_IDropTarget]
+                    _public_methods_ = ["DragEnter", "DragOver", "DragLeave", "Drop"]
+
+                    def DragEnter(self, data_obj, key_state, pt, effect):
+                        return shellcon.DROPEFFECT_COPY
+
+                    def DragOver(self, key_state, pt, effect):
+                        return shellcon.DROPEFFECT_COPY
+
+                    def DragLeave(self):
+                        pass
+
+                    def Drop(self, data_obj, key_state, pt, effect):
+                        try:
+                            fmt = (
+                                win32con.CF_HDROP,
+                                None, 1, -1,
+                                pythoncom.TYMED_HGLOBAL
+                            )
+                            storage = data_obj.GetData(fmt)
+                            count = shell.DragQueryFile(storage.data_handle, -1)
+                            files = [shell.DragQueryFile(storage.data_handle, i) for i in range(count)]
+                            print(f"[DnD] IDropTarget.Drop — files: {files}")
+
+                            if files:
+                                class DroppedFile:
+                                    def __init__(self, p):
+                                        self.path = p
+                                        self.name = os.path.basename(p)
+                                objs = [DroppedFile(p) for p in files if p]
+                                main_view.main_page.run_thread(main_view._process_files, objs)
+                        except Exception as ex:
+                            print(f"[DnD] Drop error: {ex}")
+                        return shellcon.DROPEFFECT_COPY
+
+                # Register IDropTarget on all windows
+                targets = []
+                for h in all_hwnds:
+                    try:
+                        target = wrap(BoundFileDropTarget())
+                        pythoncom.RegisterDragDrop(h, target)
+                        targets.append(target)
+                        print(f"[DnD] RegisterDragDrop OK on HWND {h}")
+                    except Exception as ex:
+                        print(f"[DnD] RegisterDragDrop failed on HWND {h}: {ex}")
+
+                # Keep targets alive and pump COM messages
+                self._dnd_targets = targets
+                print("[DnD] IDropTarget registered — pumping COM messages...")
+                while True:
+                    pythoncom.PumpWaitingMessages()
+                    import time
+                    time.sleep(0.05)
+
+            except Exception as ex:
+                print(f"[DnD] setup failed: {ex}")
+
+        threading.Thread(target=_register, daemon=True).start()
+
     def _on_dropzone_entered(self, e):
-        self._dz_container.border = ft.Border.all(2, AppTheme.PRIMARY)
-        self._dz_container.update()
+        pass
 
     def _on_dropzone_exited(self, e):
-        self._dz_container.border = None
-        self._dz_container.update()
+        pass
 
     def _on_dropzone_dropped(self, e):
-        self._dz_container.border = None
-        self._dz_container.update()
-        if hasattr(e, 'files') and e.files:
-            print(f"[DEBUG] Dropzone dropped files: {e.files}")
-            class DroppedFile:
-                def __init__(self, path):
-                    self.path = path
-                    self.name = os.path.basename(path)
-            files = [DroppedFile(p) for p in e.files]
-            self._process_files(files)
+        pass
 
     def _build_empty_state(self) -> ft.Control:
         return ft.Container(
@@ -357,7 +399,15 @@ class MainView(ft.Container):
             )
             
         header = ft.Row([
-            ft.Text("History", size=26, weight=ft.FontWeight.W_800, color=AppTheme.TEXT_PRIMARY),
+            ft.Row([
+                ft.IconButton(
+                    icon=ft.Icons.ARROW_BACK,
+                    icon_color=AppTheme.TEXT_PRIMARY,
+                    tooltip="Back to Convert",
+                    on_click=lambda e: self._switch_tab("Convert")
+                ),
+                ft.Text("History", size=26, weight=ft.FontWeight.W_800, color=AppTheme.TEXT_PRIMARY),
+            ], spacing=10),
             ft.TextButton(
                 "Clear History",
                 icon=ft.Icons.DELETE_OUTLINE,
@@ -398,7 +448,7 @@ class MainView(ft.Container):
         def remove_record(e):
             from src.backend.history_manager import HistoryManager
             HistoryManager().remove_record(record)
-            self.history_view.content = self._build_history_view()
+            self._history_view.content = self._build_history_view()
             self.update()
                 
         actions = []
@@ -453,25 +503,104 @@ class MainView(ft.Container):
     def _clear_history(self, e):
         from src.backend.history_manager import HistoryManager
         HistoryManager().clear_history()
-        self.history_view.content = self._build_history_view()
+        self._history_view.content = self._build_history_view()
         self.update()
     # ─────────────────────────────────────────────────────────────
     # Event handlers
     # ─────────────────────────────────────────────────────────────
 
+    def _init_settings_dialog(self):
+        if getattr(self, '_settings_tabs', None) is not None:
+            return
+
+        self._settings_view = SettingsView(self.main_page, on_back=None)
+        self._about_view = AboutView(self.main_page, on_back=None)
+
+        self._settings_close_btn = ft.IconButton(
+            icon=ft.Icons.CLOSE,
+            icon_color=AppTheme.TEXT_PRIMARY,
+            tooltip="Close",
+            on_click=self._close_settings_dialog
+        )
+        close_btn = self._settings_close_btn
+
+        self._settings_tabbar = ft.TabBar(
+            tabs=[
+                ft.Tab(
+                    label=ft.Row([
+                        ft.Icon(ft.Icons.SETTINGS_OUTLINED, size=20),
+                        ft.Text("Settings", size=15, weight=ft.FontWeight.W_600)
+                    ], alignment=ft.MainAxisAlignment.CENTER, spacing=6)
+                ),
+                ft.Tab(
+                    label=ft.Row([
+                        ft.Icon(ft.Icons.INFO_OUTLINED, size=20),
+                        ft.Text("About", size=15, weight=ft.FontWeight.W_600)
+                    ], alignment=ft.MainAxisAlignment.CENTER, spacing=6)
+                )
+            ],
+            tab_alignment=ft.TabAlignment.CENTER,
+            indicator_color=AppTheme.PRIMARY,
+            label_color=AppTheme.PRIMARY,
+            unselected_label_color=AppTheme.TEXT_SECONDARY,
+            splash_border_radius=ft.BorderRadius.all(8)
+        )
+
+        self._settings_tabs = ft.Tabs(
+            length=2,
+            selected_index=0,
+            expand=True,
+            content=ft.Column([
+                ft.Row([
+                    ft.Container(width=48), # Spacer for center alignment balance
+                    ft.Container(
+                        content=self._settings_tabbar,
+                        expand=True
+                    ),
+                    close_btn
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                ft.TabBarView(
+                    controls=[
+                        self._settings_view,
+                        self._about_view
+                    ],
+                    expand=True
+                )
+            ], spacing=10, expand=True)
+        )
+
+        dialog_content = ft.Container(
+            content=self._settings_tabs,
+            width=650,
+            height=550
+        )
+
+        self._settings_dialog = ft.AlertDialog(
+            content=dialog_content,
+            content_padding=16,
+            shape=ft.RoundedRectangleBorder(radius=12),
+            bgcolor=AppTheme.BACKGROUND
+        )
+        self.main_page.overlay.append(self._settings_dialog)
+
     def _switch_tab(self, label):
+        if label in ["Settings", "About"]:
+            self._init_settings_dialog()
+            self._settings_tabs.selected_index = 0 if label == "Settings" else 1
+            self._settings_dialog.open = True
+            self.main_page.update()
+            return
+
         if self.active_tab == label: return
         self.active_tab = label
         
         # update nav items visuals
-        for nav, l in [(self.nav_convert, "Convert"), (self.nav_history, "History"), (self.nav_settings, "Settings"), (self.nav_about, "About")]:
+        for nav, l in [(self.nav_history, "History"), (self.nav_settings, "Settings")]:
             active = (l == label)
             color = AppTheme.PRIMARY if active else AppTheme.TEXT_SECONDARY
             bg = AppTheme.SURFACE_VARIANT if active else ft.Colors.TRANSPARENT
             nav.bgcolor = bg
-            nav.content.controls[0].color = color
-            nav.content.controls[1].color = color
-            nav.content.controls[1].weight = ft.FontWeight.W_600 if active else ft.FontWeight.NORMAL
+            nav.icon_color = color
             try:
                 nav.update()
             except RuntimeError:
@@ -486,19 +615,16 @@ class MainView(ft.Container):
             else:
                 self._history_view.content = self._build_history_view()
             self.main_content_container.content = self._history_view
-        elif label == "Settings":
-            if self._settings_view is None:
-                self._settings_view = SettingsView(self.main_page)
-            self.main_content_container.content = self._settings_view
-        elif label == "About":
-            if self._about_view is None:
-                self._about_view = AboutView(self.main_page)
-            self.main_content_container.content = self._about_view
             
         try:
             self.main_content_container.update()
         except RuntimeError:
             pass  # Not yet attached to page (e.g. during rebuild)
+
+    def _close_settings_dialog(self):
+        if hasattr(self, '_settings_dialog'):
+            self._settings_dialog.open = False
+            self.main_page.update()
 
     async def _open_picker(self, e):
         print("[DEBUG] Dropzone clicked! Opening file picker...")
@@ -657,6 +783,8 @@ class MainView(ft.Container):
         self.convert_all_btn.disabled = not has_files
         self.clear_btn.visible = has_files
         self.queue_section.visible = has_files
+        self.dropzone.visible = not has_files
+        self.add_files_btn.visible = has_files
 
         plural = "file" if count == 1 else "files"
         self.file_count_text.value = f"{count} {plural} queued"
@@ -675,12 +803,6 @@ class MainView(ft.Container):
         converted = sum(1 for c in self.cards if c.job.status == "Completed")
         in_queue = sum(1 for c in self.cards if c.job.status in ("Pending", "Converting"))
         
-        c_plural = "file" if self.total_converted + converted == 1 else "files"
-        q_plural = "file" if in_queue == 1 else "files"
-        
-        self.stat_converted_text.value = f"{self.total_converted + converted} {c_plural}"
-        self.stat_queue_text.value = f"{in_queue} {q_plural}"
-        
         self._empty_state.visible = not has_files
 
         # Stop queue if no items are pending/converting
@@ -697,50 +819,22 @@ class MainView(ft.Container):
             pass
 
     def refresh_colors(self):
-        """Update all sidebar and page-level colors in-place — no rebuild, no scroll jitter."""
-        # Sidebar container background
-        self.sidebar_container.bgcolor = AppTheme.SURFACE
+        """Update all page-level colors in-place — no rebuild, no scroll jitter."""
+        # === TOPBAR ===
+        try:
+            topbar_col = self.convert_view.controls[0]   # Column
+            topbar_row = topbar_col.controls[0]           # Row (title col + nav row)
+            title_col  = topbar_row.controls[0]           # Column with title + subtitle
+            title_col.controls[0].color = AppTheme.TEXT_PRIMARY   # "Any Converter"
+            title_col.controls[1].color = AppTheme.TEXT_MUTED     # subtitle
+        except Exception:
+            pass
 
-        sidebar_col = self.sidebar_container.content  # ft.Column
-        # Logo section (controls[0]): Container > Row > [logo_box, title]
-        logo_section = sidebar_col.controls[0]
-        logo_row = logo_section.content
-        logo_box = logo_row.controls[0]       # the coloured square
-        logo_box.bgcolor = AppTheme.PRIMARY
-        logo_title = logo_row.controls[1]     # "AnyConv" text
-        logo_title.color = AppTheme.TEXT_PRIMARY
-
-        # Nav items column (controls[1]): Container > Column
-        nav_col = sidebar_col.controls[1].content
-        for nav, label in zip(nav_col.controls,
-                              ["Convert", "History", "Settings"]):
+        # === NAV BUTTONS ===
+        for nav, label in [(self.nav_history, "History"), (self.nav_settings, "Settings")]:
             is_active = (label == self.active_tab)
             nav.bgcolor = AppTheme.SURFACE_VARIANT if is_active else ft.Colors.TRANSPARENT
-            nav.content.controls[0].color = AppTheme.PRIMARY if is_active else AppTheme.TEXT_SECONDARY
-            nav.content.controls[1].color = AppTheme.PRIMARY if is_active else AppTheme.TEXT_SECONDARY
-            nav.content.controls[1].weight = (
-                ft.FontWeight.W_600 if is_active else ft.FontWeight.NORMAL
-            )
-
-        # Stats section (controls[3]): Container > Column
-        stats_col = sidebar_col.controls[3].content
-        # Divider
-        stats_col.controls[0].color = AppTheme.BORDER
-        # "Session Stats" label
-        stats_col.controls[2].color = AppTheme.TEXT_MUTED
-        # Converted row
-        for row in [stats_col.controls[4], stats_col.controls[6]]:
-            row.controls[0].color = AppTheme.TEXT_MUTED
-            row.controls[1].color = AppTheme.TEXT_MUTED
-            row.controls[3].color = AppTheme.TEXT_SECONDARY
-
-        # Root vertical divider
-        self.root_divider.color = AppTheme.BORDER
-        
-        # === TOPBAR ===
-        topbar_col = self.convert_view.controls[0].controls[0].controls[0]
-        topbar_col.controls[0].color = AppTheme.TEXT_PRIMARY
-        topbar_col.controls[1].color = AppTheme.TEXT_MUTED
+            nav.icon_color = AppTheme.PRIMARY if is_active else AppTheme.TEXT_SECONDARY
 
         # === DROPZONE ===
         self._dz_container.gradient = ft.LinearGradient(
@@ -756,11 +850,14 @@ class MainView(ft.Container):
         self._dz_badge.content.controls[1].color = AppTheme.PRIMARY
 
         # === QUEUE HEADER ===
-        queue_row = self.queue_section.content.controls[0]
-        left_row = queue_row.controls[0]
-        left_row.controls[0].color = AppTheme.PRIMARY
-        left_row.controls[1].color = AppTheme.TEXT_PRIMARY
-        self.file_count_text.color = AppTheme.TEXT_MUTED
+        try:
+            queue_row = self.queue_section.content.controls[0]
+            left_row = queue_row.controls[0]
+            left_row.controls[0].color = AppTheme.PRIMARY
+            left_row.controls[1].color = AppTheme.TEXT_PRIMARY
+            self.file_count_text.color = AppTheme.TEXT_MUTED
+        except Exception:
+            pass
 
         # Convert All Button
         self.convert_all_btn.style.bgcolor = {
@@ -775,25 +872,45 @@ class MainView(ft.Container):
         self.clear_btn.content.controls[1].color = AppTheme.ERROR
         
         # === EMPTY STATE ===
-        empty_col = self._empty_state.content
-        empty_col.controls[0].color = AppTheme.TEXT_MUTED
-        empty_col.controls[1].color = AppTheme.TEXT_MUTED
-        empty_col.controls[2].color = AppTheme.TEXT_MUTED
+        try:
+            empty_col = self._empty_state.content
+            empty_col.controls[0].color = AppTheme.TEXT_MUTED
+            empty_col.controls[1].color = AppTheme.TEXT_MUTED
+            empty_col.controls[2].color = AppTheme.TEXT_MUTED
+        except Exception:
+            pass
 
         # === CACHED VIEWS ===
         if getattr(self, '_history_view', None) is not None:
             self._history_view.content = self._build_history_view()
-        elif getattr(self, 'history_view', None) is not None:
-            self.history_view.content = self._build_history_view()
 
         if getattr(self, '_about_view', None) is not None:
             self._about_view.content = self._about_view._build_content()
+
+        # === SETTINGS VIEW ===
+        if getattr(self, '_settings_view', None) is not None:
+            try:
+                self._settings_view.build_ui()
+            except Exception:
+                pass
 
         # === CARDS ===
         for card in getattr(self, 'cards', []):
             if hasattr(card, 'refresh_colors'):
                 card.refresh_colors()
+                
+        # === DIALOGS & TABS ===
+        if getattr(self, '_settings_dialog', None) is not None:
+            self._settings_dialog.bgcolor = AppTheme.BACKGROUND
+
+        if getattr(self, '_settings_close_btn', None) is not None:
+            self._settings_close_btn.icon_color = AppTheme.TEXT_PRIMARY
             
+        if getattr(self, '_settings_tabbar', None) is not None:
+            self._settings_tabbar.indicator_color = AppTheme.PRIMARY
+            self._settings_tabbar.label_color = AppTheme.PRIMARY
+            self._settings_tabbar.unselected_label_color = AppTheme.TEXT_SECONDARY
+
         try:
             self.update()
         except Exception:

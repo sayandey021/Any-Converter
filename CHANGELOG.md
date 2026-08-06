@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.5.0] - 2026-08-06
+
+### 🚀 Added & Improved
+- **Complete UI Redesign & Sidebar Removal**:
+  - Redesigned the application layout into a modern full-width interface.
+  - Removed the sidebar navigation panel and replaced it with a streamlined topbar navigation header featuring History and Settings controls (removing redundant top Convert tab).
+- **Smart Format Re-Conversion**:
+  - Automatically resets job status from `Completed` or `Failed` back to `Pending` when selecting a new format, allowing instant re-conversion without re-adding files.
+  - Reset history recording flags so multi-format conversion runs for the same input file create individual entries in the History log.
+- **UI & Navigation Polish**:
+  - **Unified Settings & About Modal**: Consolidated Settings and About views into a clean, centered popup dialog with rounded tab indicators and inline tab labels.
+  - **Dynamic Theme Accent Sync**: Tab indicator and label colors now update instantly in real-time when changing accent colors in Settings.
+  - **Zero-Stutter Tab Switching**: Pre-instantiated Settings and About dialog views upfront to eliminate first-time tab switching lag.
+  - **Scrollbar Alignment**: Aligned scrollbar bounds in Settings and About panels so scrollbars end precisely at the bottom edge of the last card.
+  - **Settings Organization**: Reordered settings sections so **Appearance** sits directly below **General**.
+  - **Redesigned About View**: Sleek cardless hero layout with clean logo presentation and pill-style GitHub & LinkedIn action buttons.
+  - **Codec Option Clarity**: Updated passthrough codec dropdown labels to **`Default (Fast)`**.
+  - **Format Picker Divisions**: Organized output format picker with categorized division tags (Lossless, Lossy, Web, Broadcast, CAD, etc.).
+
+### 🐛 Bug Fixes
+- **Modal Close Button Contrast**: Fixed popup close button icon color so it stays clearly visible across dark and light theme switches.
+- **History View**: Fixed AttributeError references when clearing or removing individual items from History.
+- **Flet Control Styling**: Resolved `BorderRadius` and `Margin` attribute compatibility errors across Flet versions.
+
+---
+
 ## [1.2.1] - 2026-07-31
 
 ### 🚀 Added
