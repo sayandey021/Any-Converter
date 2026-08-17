@@ -17,11 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Reset history recording flags so multi-format conversion runs for the same input file create individual entries in the History log.
 - **UI & Navigation Polish**:
   - **Unified Settings & About Modal**: Consolidated Settings and About views into a clean, centered popup dialog with rounded tab indicators and inline tab labels.
-  - **Dynamic Theme Accent Sync**: Tab indicator and label colors now update instantly in real-time when changing accent colors in Settings.
+  - **Neutral Dark Obsidian Palette**: Replaced violet-tinted dark mode shades with a clean, neutral charcoal/slate dark theme (`#0a0c10`, `#12151c`).
+  - **Dynamic Theme Accent Sync**: Tab indicators, labels, and action button icons (GitHub & LinkedIn) now update instantly in real-time when changing accent colors in Settings.
   - **Zero-Stutter Tab Switching**: Pre-instantiated Settings and About dialog views upfront to eliminate first-time tab switching lag.
   - **Scrollbar Alignment**: Aligned scrollbar bounds in Settings and About panels so scrollbars end precisely at the bottom edge of the last card.
   - **Settings Organization**: Reordered settings sections so **Appearance** sits directly below **General**.
-  - **Redesigned About View**: Sleek cardless hero layout with clean logo presentation and pill-style GitHub & LinkedIn action buttons.
+  - **Redesigned About View**: Sleek cardless hero layout with clean logo presentation, pill-style GitHub & LinkedIn action buttons, and lightweight category cards (removed extra note footers).
   - **Codec Option Clarity**: Updated passthrough codec dropdown labels to **`Default (Fast)`**.
   - **Format Picker Divisions**: Organized output format picker with categorized division tags (Lossless, Lossy, Web, Broadcast, CAD, etc.).
 

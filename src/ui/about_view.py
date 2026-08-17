@@ -88,7 +88,7 @@ class AboutView(ft.Container):
         # GitHub button
         github_btn = ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.CODE_ROUNDED, color=AppTheme.TEXT_PRIMARY, size=16),
+                ft.Icon(ft.Icons.CODE_ROUNDED, color=AppTheme.PRIMARY, size=16),
                 ft.Text("GitHub", color=AppTheme.TEXT_PRIMARY, size=13, weight=ft.FontWeight.W_700),
             ], tight=True, spacing=8, alignment=ft.MainAxisAlignment.CENTER),
             bgcolor=AppTheme.SURFACE_3,
@@ -249,7 +249,6 @@ class AboutView(ft.Container):
                 "icon": ft.Icons.CATEGORY_OUTLINED,
                 "inputs": [".svg", ".ai", ".eps", ".ps", ".cdr", ".xps", ".oxps"],
                 "exports": [".png", ".jpg", ".jpeg", ".webp", ".pdf", ".svg"],
-                "note": ".ai vector files are supported via PDF layers; .eps, .ps, and CorelDRAW (.cdr) files are rendered natively via CLI tools (LibreOffice/Inkscape) or embedded preview streams. .xps and .oxps documents are converted directly as vector page sheets."
             },
         ]
 

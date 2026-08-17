@@ -7,14 +7,14 @@ class AppTheme:
     PRIMARY = "#7c3aed"        # Violet
     PRIMARY_HOVER = "#6d28d9"
     PRIMARY_LIGHT = "#a78bfa"
-    BACKGROUND = "#09090f"
-    SURFACE = "#13131f"
-    SURFACE_2 = "#1a1a2e"
-    SURFACE_3 = "#222236"
-    SURFACE_VARIANT = "#2d2d4a"
-    TEXT_PRIMARY = "#f1f0ff"
-    TEXT_SECONDARY = "#8b8aaa"
-    TEXT_MUTED = "#5c5b75"
+    BACKGROUND = "#0a0c10"
+    SURFACE = "#12151c"
+    SURFACE_2 = "#1a1d26"
+    SURFACE_3 = "#242834"
+    SURFACE_VARIANT = "#2e3342"
+    TEXT_PRIMARY = "#f1f5f9"
+    TEXT_SECONDARY = "#94a3b8"
+    TEXT_MUTED = "#64748b"
     ACCENT = "#38bdf8"
     GLASS_SURFACE = "#0Dffffff"
     GLASS_BORDER = "#18ffffff"
@@ -27,7 +27,7 @@ class AppTheme:
     SUCCESS_BG = "#0f2d1a"
     WARNING = "#f59e0b"
     INFO = "#38bdf8"
-    BORDER = "#2a2a3e"
+    BORDER = "#272b38"
 
     ACCENT_COLORS = {
         'Violet': {'PRIMARY': "#7c3aed", 'PRIMARY_HOVER': "#6d28d9", 'PRIMARY_LIGHT': "#a78bfa"},
@@ -44,14 +44,14 @@ class AppTheme:
         'PRIMARY': "#7c3aed",
         'PRIMARY_HOVER': "#6d28d9",
         'PRIMARY_LIGHT': "#a78bfa",
-        'BACKGROUND': "#09090f",
-        'SURFACE': "#13131f",
-        'SURFACE_2': "#1a1a2e",
-        'SURFACE_3': "#222236",
-        'SURFACE_VARIANT': "#2d2d4a",
-        'TEXT_PRIMARY': "#f1f0ff",
-        'TEXT_SECONDARY': "#8b8aaa",
-        'TEXT_MUTED': "#5c5b75",
+        'BACKGROUND': "#0a0c10",
+        'SURFACE': "#12151c",
+        'SURFACE_2': "#1a1d26",
+        'SURFACE_3': "#242834",
+        'SURFACE_VARIANT': "#2e3342",
+        'TEXT_PRIMARY': "#f1f5f9",
+        'TEXT_SECONDARY': "#94a3b8",
+        'TEXT_MUTED': "#64748b",
         'ACCENT': "#38bdf8",
         'ERROR': "#ef4444",
         'ERROR_BG': "#2d1515",
@@ -59,7 +59,7 @@ class AppTheme:
         'SUCCESS_BG': "#0f2d1a",
         'WARNING': "#f59e0b",
         'INFO': "#38bdf8",
-        'BORDER': "#2a2a3e",
+        'BORDER': "#272b38",
         'GLASS_SURFACE': "#0Dffffff",
         'GLASS_BORDER': "#18ffffff",
         'GLASS_SURFACE_VARIANT': "#14ffffff",

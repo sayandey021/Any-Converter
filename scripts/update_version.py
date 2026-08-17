@@ -68,6 +68,21 @@ def main():
     else:
         print(f"Warning: Could not find {bat_path}")
 
+    # 4. Update scripts/patch_flet_exe.py
+    patch_path = os.path.join(script_dir, 'patch_flet_exe.py')
+    if os.path.exists(patch_path):
+        with open(patch_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+            
+        content = re.sub(r'--set-file-version",\s+"[^"]+"', f'--set-file-version", "{win_version}"', content)
+        content = re.sub(r'--set-product-version",\s+"[^"]+"', f'--set-product-version", "{win_version}"', content)
+        
+        with open(patch_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        print(f"Updated {patch_path}")
+    else:
+        print(f"Warning: Could not find {patch_path}")
+
     print("Version update complete!")
 
 if __name__ == '__main__':
