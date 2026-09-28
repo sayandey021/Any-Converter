@@ -121,7 +121,7 @@ class AboutView(ft.Container):
                 ft.Container(height=16),
                 ft.Text("Any Converter", size=30, weight=ft.FontWeight.W_800, color=AppTheme.TEXT_PRIMARY),
                 ft.Container(height=2),
-                ft.Text("Version 1.5.0", size=14, color=AppTheme.TEXT_MUTED, weight=ft.FontWeight.W_500),
+                ft.Text("Version 1.5.2", size=14, color=AppTheme.TEXT_MUTED, weight=ft.FontWeight.W_500),
                 ft.Container(height=12),
                 ft.Text("Developed by Sayan Dey", size=15, color=AppTheme.TEXT_SECONDARY, weight=ft.FontWeight.W_600),
                 ft.Container(height=10),
@@ -163,9 +163,9 @@ class AboutView(ft.Container):
             {
                 "title": "Images",
                 "icon": ft.Icons.IMAGE_OUTLINED,
-                "inputs": [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".heic", ".heif", ".psd", ".ico", ".indd", ".idml", ".raw", ".cr2", ".nef", ".arw", ".dng", ".raf", ".pef", ".tga", ".pcx", ".pbm", ".pgm", ".ppm", ".exr", ".dpx"],
+                "inputs": [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".heic", ".heif", ".ico", ".tiff", ".tif", ".avif", ".jxl", ".psd", ".raw", ".cr2", ".nef", ".arw", ".dng", ".raf", ".pef", ".tga", ".pcx", ".ppm", ".pgm", ".pbm", ".pnm", ".icns", ".sgi", ".dds", ".dib", ".xbm", ".xpm", ".cur", ".exr", ".dpx"],
                 "exports": [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".ico", ".tiff", ".tif", ".avif", ".jxl", ".heic", ".heif", ".tga", ".pcx", ".ppm", ".pgm", ".pbm", ".pnm", ".icns", ".sgi", ".dds", ".dib", ".xbm", ".xpm", ".cur"],
-                "note": ".psd, .indd, .idml, .raw, .cr2, .nef, .arw, .dng are supported as inputs for conversion by extracting image data or embedded previews."
+                "note": ".psd, .raw, .cr2, .nef, .arw, .dng are supported as inputs for conversion by extracting image data or debayering RAW photos."
             },
             {
                 "title": "Video",
@@ -211,8 +211,8 @@ class AboutView(ft.Container):
             {
                 "title": "PDFs & E-Books",
                 "icon": ft.Icons.MENU_BOOK_OUTLINED,
-                "inputs": [".pdf", ".epub", ".mobi", ".azw3", ".azw", ".iba", ".djvu", ".djv", ".cbr", ".cbz", ".cb7", ".cbt", ".chm"],
-                "exports": [".png", ".jpg", ".jpeg", ".webp", ".pdf"],
+                "inputs": [".pdf", ".epub", ".mobi", ".azw3", ".azw", ".iba", ".djvu", ".djv", ".cbr", ".cbz", ".cb7", ".cbt", ".chm", ".snb", ".pdb", ".lrf", ".fb2", ".fbz"],
+                "exports": [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".epub"],
             },
             {
                 "title": "Databases & SQL",

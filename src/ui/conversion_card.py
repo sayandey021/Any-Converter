@@ -32,6 +32,34 @@ FILE_TYPE_MAP = {
     'webp': (ft.Icons.IMAGE_SEARCH,   "#06b6d4"),
     'gif':  (ft.Icons.GIF,            "#22d3ee"),
     'ico':  (ft.Icons.GRID_VIEW,      "#64748b"),
+    'bmp':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'tiff': (ft.Icons.PHOTO_CAMERA,   "#0ea5e9"),
+    'tif':  (ft.Icons.PHOTO_CAMERA,   "#0ea5e9"),
+    'avif': (ft.Icons.IMAGE,          "#38bdf8"),
+    'jxl':  (ft.Icons.IMAGE,          "#06b6d4"),
+    'heic': (ft.Icons.PHOTO_CAMERA,   "#0ea5e9"),
+    'heif': (ft.Icons.PHOTO_CAMERA,   "#0ea5e9"),
+    'tga':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'pcx':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'ppm':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'pgm':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'pbm':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'pnm':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'icns': (ft.Icons.GRID_VIEW,      "#64748b"),
+    'sgi':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'dds':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'dib':  (ft.Icons.IMAGE,          "#38bdf8"),
+    'cur':  (ft.Icons.MOUSE,          "#64748b"),
+    'exr':  (ft.Icons.HDR_ON,         "#f59e0b"),
+    'dpx':  (ft.Icons.MOVIE,          "#8b5cf6"),
+    'raw':  (ft.Icons.CAMERA,         "#ec4899"),
+    'cr2':  (ft.Icons.CAMERA,         "#ec4899"),
+    'nef':  (ft.Icons.CAMERA,         "#ec4899"),
+    'arw':  (ft.Icons.CAMERA,         "#ec4899"),
+    'dng':  (ft.Icons.CAMERA,         "#ec4899"),
+    'raf':  (ft.Icons.CAMERA,         "#ec4899"),
+    'pef':  (ft.Icons.CAMERA,         "#ec4899"),
+    'psd':  (ft.Icons.LAYERS,         "#3b82f6"),
     # Markup
     'md':   (ft.Icons.TEXT_SNIPPET,   "#64748b"),
     # Data
@@ -150,9 +178,9 @@ FILE_TYPE_MAP = {
 }
 
 FORMAT_GROUPS = {
-    'video': ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'vro', 'dat', 'mpg', 'mpeg', 'm3u8', 'm3u', 'm4s'],
+    'video': ['mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'vro', 'dat', 'mpg', 'mpeg', 'm2v', 'm1v', 'm4v', 'wtv', 'dvr-ms', 'swf', 'divx', 'xvid', 'nut', 'mvi', 'roq', 'svi', 'ivf', 'h264', 'h265', 'hevc', 'amv', 'bik', 'bk2', 'm3u8', 'm3u', 'm4s'],
     'audio': ['mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg', 'aiff', 'alac', 'dff', 'dsf', 'mqa', 'mod', 's3m', 'xm', 'it', 'wma', 'ra', 'bwf', 'amr', 'ac3', 'eac3', 'thd', 'dts', 'dtshd', 'aob'],
-    'image': ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic', 'heif', 'ico', 'tiff', 'tif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'avif', 'jxl', 'psd', 'indd', 'idml', 'raf', 'pef', 'tga', 'pcx', 'ppm', 'pgm', 'pbm', 'pnm', 'icns', 'sgi', 'dds', 'dib', 'xbm', 'xpm', 'cur', 'exr', 'dpx'],
+    'image': ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'heic', 'heif', 'ico', 'tiff', 'tif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'avif', 'jxl', 'psd', 'raf', 'pef', 'tga', 'pcx', 'ppm', 'pgm', 'pbm', 'pnm', 'icns', 'sgi', 'dds', 'dib', 'xbm', 'xpm', 'cur', 'exr', 'dpx'],
     'markup': ['md'],
     'data': ['json', 'yaml', 'yml', 'csv', 'xml'],
     'database': ['sql', 'db', 'sqlite', 'sqlite3', 'mdb', 'accdb'],
@@ -161,7 +189,7 @@ FORMAT_GROUPS = {
     'subtitle': ['srt', 'vtt', 'ass', 'ssa', 'sub', 'scc'],
     'font': ['ttf', 'otf', 'woff', 'woff2'],
     'document': [
-        'pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'doc', 'docx', 'docm', 'dot', 'dotx', 'dotm', 'rtf', 'txt', 'log', 'odt', 'mht', 'html', 'htm', 'wpd', 'wps',
+        'pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'snb', 'pdb', 'lrf', 'fb2', 'fbz', 'doc', 'docx', 'docm', 'dot', 'dotx', 'dotm', 'rtf', 'txt', 'log', 'odt', 'mht', 'html', 'htm', 'wpd', 'wps',
         'xls', 'xlsx', 'xlsm', 'xlsb', 'ods',
         'ppt', 'pptx', 'pptm', 'pps', 'odp',
         'vsd', 'vsdx', 'pub', 'mpp'
@@ -181,7 +209,10 @@ FORMAT_DIVISIONS = {
     'gif': 'Animated', 'bmp': 'Uncompressed', 'ico': 'Icons', 'svg': 'Vector',
     'heic': 'Mobile', 'heif': 'Mobile', 'tiff': 'Pro & RAW', 'tif': 'Pro & RAW',
     'psd': 'Pro & RAW', 'raw': 'Pro & RAW', 'dng': 'Pro & RAW', 'avif': 'Web',
-    'jxl': 'Web', 'tga': 'Pro & RAW', 'exr': 'Pro & RAW',
+    'jxl': 'Web', 'tga': 'Pro & RAW', 'exr': 'Pro & RAW', 'dpx': 'Pro & RAW',
+    'pcx': 'Legacy', 'ppm': 'Uncompressed', 'pgm': 'Uncompressed', 'pbm': 'Uncompressed', 'pnm': 'Uncompressed',
+    'icns': 'Icons', 'cur': 'Icons', 'sgi': 'Legacy', 'dds': 'Gaming', 'dib': 'Uncompressed',
+    'xbm': 'Legacy', 'xpm': 'Legacy',
 
     # Video divisions
     'mp4': 'Standard', 'mkv': 'Standard', 'webm': 'Web', 'mov': 'Standard',
@@ -190,7 +221,7 @@ FORMAT_DIVISIONS = {
     '3gp': 'Mobile', '3g2': 'Mobile',
 
     # Document & E-book divisions
-    'pdf': 'Document', 'epub': 'E-Book', 'mobi': 'E-Book', 'azw3': 'E-Book',
+    'pdf': 'Document', 'epub': 'E-Book', 'mobi': 'E-Book', 'azw3': 'E-Book', 'fb2': 'E-Book', 'snb': 'E-Book', 'pdb': 'E-Book', 'lrf': 'E-Book', 'fbz': 'E-Book',
     'doc': 'Office', 'docx': 'Office', 'xls': 'Spreadsheet', 'xlsx': 'Spreadsheet',
     'ppt': 'Presentation', 'pptx': 'Presentation', 'txt': 'Text', 'md': 'Text',
 
@@ -272,13 +303,15 @@ class ConversionCard(ft.Container):
             elif self.ext in ['rtf', 'html', 'htm']:
                 target_opts = ['pdf', 'md', 'txt', 'html', 'rtf']
                 default = 'pdf'
-            elif self.ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
-                if self.ext in ['epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
-                    target_opts = ['pdf', 'png', 'jpg', 'webp']
+            elif self.ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'snb', 'pdb', 'lrf', 'fb2', 'fbz']:
+                if self.ext in ['epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'snb', 'pdb', 'lrf', 'fb2', 'fbz']:
+                    target_opts = ['pdf', 'png', 'jpg', 'webp', 'tiff', 'avif', 'jxl', 'bmp', 'epub']
+                    if self.ext == 'epub':
+                        target_opts.remove('epub')
                     default = 'pdf'
                 else:
-                    # PDF can only convert to images right now
-                    target_opts = ['png', 'jpg', 'webp']
+                    # PDF can convert to extracted images or EPUB
+                    target_opts = ['png', 'jpg', 'webp', 'tiff', 'avif', 'jxl', 'bmp', 'epub']
                     default = 'png'
             else:
                 target_opts = ['pdf']
@@ -288,21 +321,36 @@ class ConversionCard(ft.Container):
             default = 'glb' if self.ext in ['obj', 'stl', 'ply', 'off', 'dae', 'fbx', 'step', 'stp', 'iges', 'igs', 'dxf', 'dwg', '3mf'] else 'obj'
         elif self.src_group == 'vector':
             if self.ext == 'svg':
-                target_opts = ['png', 'jpg', 'jpeg', 'webp', 'pdf', 'eps', 'ico']
+                target_opts = ['png', 'jpg', 'jpeg', 'webp', 'pdf', 'eps', 'ico', 'tiff', 'avif', 'jxl', 'bmp']
                 default = 'png'
             else:  # eps, ai, ps, cdr, xps, oxps
-                target_opts = ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'svg', 'ico']
+                target_opts = ['pdf', 'png', 'jpg', 'jpeg', 'webp', 'svg', 'ico', 'tiff', 'avif', 'jxl', 'bmp']
                 default = 'pdf' if self.ext in ['ai', 'eps', 'ps', 'cdr', 'xps', 'oxps'] else 'png'
         else:  # image / other
             if self.ext == 'gif':
                 target_opts = ['mp4', 'webm', 'png', 'jpg', 'webp', 'ico']
                 default = 'mp4'
             else:
-                target_opts = ['png', 'jpg', 'webp', 'gif', 'bmp', 'ico', 'svg', 'heic', 'heif']
+                target_opts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'ico', 'svg', 'tiff', 'tif', 'avif', 'jxl', 'heic', 'heif', 'tga', 'pcx', 'ppm', 'pgm', 'pbm', 'pnm', 'icns', 'sgi', 'dds', 'dib', 'xbm', 'xpm', 'cur']
                 default = 'jpg' if self.ext == 'png' else 'png'
 
-        self.job.target_format = self.job.target_format or default
+        if self.job.target_format and self.job.target_format not in target_opts:
+            self.job.target_format = default
+        else:
+            self.job.target_format = self.job.target_format or default
         self.target_opts = target_opts
+
+        # Ensure job.output_path matches the current target_format
+        if not self.job.output_path or not self.job.output_path.lower().endswith(f".{self.job.target_format.lower()}"):
+            from src.backend.converter import resolve_unique_path
+            name_no_ext, src_ext = os.path.splitext(self.filename)
+            self.job.output_path = resolve_unique_path(
+                self.job.output_dir,
+                name_no_ext,
+                self.job.target_format,
+                src_ext=src_ext,
+                input_path=self.job.input_path
+            )
 
         icon_name, icon_color = FILE_TYPE_MAP.get(self.ext, (ft.Icons.INSERT_DRIVE_FILE, AppTheme.TEXT_SECONDARY))
 
@@ -338,6 +386,18 @@ class ConversionCard(ft.Container):
         )
 
         # ── Action buttons ────────────────────────────────────────
+        self.folder_btn = ft.IconButton(
+            icon=ft.Icons.FOLDER_OPEN_OUTLINED,
+            icon_color=AppTheme.PRIMARY,
+            icon_size=16,
+            on_click=self._open_output,
+            tooltip="Open file in folder",
+            visible=False,
+            style=ft.ButtonStyle(
+                shape=ft.RoundedRectangleBorder(radius=6),
+                padding=ft.Padding(left=6, right=6, top=6, bottom=6),
+            )
+        )
         self.delete_btn = ft.IconButton(
             icon=ft.Icons.CLOSE,
             icon_color=AppTheme.TEXT_MUTED,
@@ -363,7 +423,7 @@ class ConversionCard(ft.Container):
 
         if self.ext in ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'ico']:
             self._apply_thumbnail(job.input_path)
-        elif self.ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg', 'aiff', 'alac', 'dff', 'dsf', 'mqa', 'mod', 's3m', 'xm', 'it', 'wma', 'ra', 'bwf', 'amr', 'ac3', 'eac3', 'thd', 'dts', 'dtshd', 'obj', 'stl', 'ply', 'off', 'dae', 'glb', 'gltf', 'svg', 'tiff', 'tif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'avif', 'jxl', 'heic', 'heif', 'psd']:
+        elif self.ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'snb', 'pdb', 'lrf', 'fb2', 'fbz', 'mp4', 'mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'mp3', 'wav', 'flac', 'm4a', 'aac', 'ogg', 'aiff', 'alac', 'dff', 'dsf', 'mqa', 'mod', 's3m', 'xm', 'it', 'wma', 'ra', 'bwf', 'amr', 'ac3', 'eac3', 'thd', 'dts', 'dtshd', 'obj', 'stl', 'ply', 'off', 'dae', 'glb', 'gltf', 'svg', 'tiff', 'tif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'avif', 'jxl', 'heic', 'heif', 'psd']:
             thumb_path = get_thumbnail(job.input_path)
             if thumb_path:
                 self._apply_thumbnail(thumb_path)
@@ -449,8 +509,9 @@ class ConversionCard(ft.Container):
                     file_info,
                     convert_section,
                     self.status_badge,
+                    self.folder_btn,
                     self.delete_btn,
-                ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=14),
+                ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
                 self.progress_row,
             ], spacing=0),
         )
@@ -744,7 +805,8 @@ class ConversionCard(ft.Container):
 
     def on_format_change(self, fmt: str):
         new_fmt = fmt.strip().lower()
-        print(f"[FORMAT_CHANGE] {self.filename}: {self.job.target_format} -> {new_fmt!r}")
+        from src.backend.converter import safe_print
+        safe_print(f"[FORMAT_CHANGE] {self.filename}: {self.job.target_format} -> {new_fmt!r}")
         if not new_fmt:
             return
 
@@ -754,15 +816,44 @@ class ConversionCard(ft.Container):
             self._recorded = False
             self.update_status()
 
+        # Refresh output_dir from settings in case it changed
+        from src.backend.settings import SettingsManager
+        settings_dir = SettingsManager().get('output_dir')
+        if settings_dir:
+            self.job.output_dir = settings_dir
+        else:
+            self.job.output_dir = os.path.dirname(self.job.input_path)
+
         self.job.target_format = new_fmt
-        name_no_ext = os.path.splitext(self.filename)[0]
-        self.job.output_path = os.path.join(
+        name_no_ext, src_ext = os.path.splitext(self.filename)
+        from src.backend.converter import resolve_unique_path
+        self.job.output_path = resolve_unique_path(
             self.job.output_dir,
-            f"{name_no_ext}.{self.job.target_format}"
+            name_no_ext,
+            self.job.target_format,
+            src_ext=src_ext,
+            input_path=self.job.input_path
         )
-        print(f"[FORMAT_CHANGE] new output_path: {self.job.output_path}")
+        safe_print(f"[FORMAT_CHANGE] new output_path: {self.job.output_path}")
         self._update_size_info()
         self.update()
+
+    def _open_output(self, e=None):
+        out_path = getattr(self.job, 'output_path', None)
+        out_dir = getattr(self.job, 'output_dir', None)
+        if out_path and os.path.exists(out_path):
+            if os.path.isdir(out_path):
+                os.startfile(out_path)
+            elif os.name == 'nt':
+                # Open explorer with the generated file selected
+                try:
+                    subprocess.Popen(f'explorer /select,"{os.path.abspath(out_path)}"')
+                except Exception:
+                    os.startfile(os.path.dirname(out_path))
+            else:
+                os.startfile(os.path.dirname(out_path))
+        elif out_dir and os.path.exists(out_dir):
+            os.startfile(out_dir)
 
     def update_status(self):
         status = self.job.status
@@ -771,6 +862,8 @@ class ConversionCard(ft.Container):
             self.progress_row.visible = False
             self._set_badge("Pending", AppTheme.TEXT_MUTED, AppTheme.SURFACE_3)
             self._accent_strip.bgcolor = f"#40{AppTheme.PRIMARY[1:]}"
+            self.folder_btn.visible = False
+            self.delete_btn.visible = True
             self.delete_btn.icon = ft.Icons.CLOSE
             self.delete_btn.icon_color = AppTheme.TEXT_MUTED
             self.delete_btn.tooltip = "Remove"
@@ -786,6 +879,8 @@ class ConversionCard(ft.Container):
             self.progress_bar.color = AppTheme.PRIMARY
             self.progress_row.visible = True
             self._accent_strip.bgcolor = AppTheme.PRIMARY
+            self.folder_btn.visible = False
+            self.delete_btn.visible = False
         elif status == "Completed":
             self.progress_bar.visible = True
             self.progress_bar.value = 1
@@ -793,14 +888,25 @@ class ConversionCard(ft.Container):
             self.progress_row.visible = True
             self._set_badge("Done ✓", AppTheme.SUCCESS, AppTheme.SUCCESS_BG)
             self._accent_strip.bgcolor = AppTheme.SUCCESS
-            self.delete_btn.icon = ft.Icons.FOLDER_OPEN
-            self.delete_btn.icon_color = AppTheme.PRIMARY
-            self.delete_btn.on_click = lambda _: os.startfile(self.job.output_dir)
-            self.delete_btn.tooltip = "Open folder"
+            self.folder_btn.visible = True
+            self.folder_btn.icon = ft.Icons.FOLDER_OPEN_OUTLINED
+            self.folder_btn.icon_color = AppTheme.PRIMARY
+            self.folder_btn.tooltip = "Open output file"
+            self.delete_btn.visible = True
+            self.delete_btn.icon = ft.Icons.CLOSE
+            self.delete_btn.icon_color = AppTheme.TEXT_MUTED
+            self.delete_btn.tooltip = "Remove"
+            self.delete_btn.on_click = lambda _: self.on_remove(self)
         elif status == "Failed":
             self.progress_row.visible = False
             self._set_badge("✗ Failed", AppTheme.ERROR, AppTheme.ERROR_BG)
             self._accent_strip.bgcolor = AppTheme.ERROR
+            self.folder_btn.visible = False
+            self.delete_btn.visible = True
+            self.delete_btn.icon = ft.Icons.CLOSE
+            self.delete_btn.icon_color = AppTheme.TEXT_MUTED
+            self.delete_btn.tooltip = "Remove"
+            self.delete_btn.on_click = lambda _: self.on_remove(self)
         self.update()
         if self.on_status_change:
             self.on_status_change()

@@ -50,7 +50,7 @@ def get_thumbnail(input_path: str) -> str | None:
             print(f"[THUMBNAIL] Error generating High-end Image thumbnail: {e}")
 
     # PDF & EPUB & eBook thumbnails
-    if ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
+    if ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'snb', 'pdb', 'lrf', 'fb2', 'fbz']:
         try:
             import fitz
             from src.backend.converter import load_ebook_doc

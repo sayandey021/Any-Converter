@@ -1,9 +1,20 @@
 import os
+import sys
 import subprocess
 import threading
 from PIL import Image
 from src.backend.ffmpeg_manager import get_local_ffmpeg_exe
 from src.backend.settings import SettingsManager
+
+def safe_print(*args, **kwargs):
+    try:
+        print(*args, **kwargs)
+    except Exception:
+        try:
+            safe_args = [str(a).encode('utf-8', errors='replace').decode('ascii', errors='replace') for a in args]
+            print(*safe_args, **kwargs)
+        except Exception:
+            pass
 
 try:
     import importlib
@@ -12,41 +23,6 @@ try:
 except Exception:
     pass
 
-def open_indesign_preview(file_path):
-    ext = os.path.splitext(file_path)[1].lower()
-    import io
-    from PIL import Image
-
-    if ext == '.indd':
-        import re
-        with open(file_path, 'rb') as f:
-            data = f.read()
-        jpeg_starts = [m.start() for m in re.finditer(b'\xFF\xD8\xFF', data)]
-        if not jpeg_starts:
-            raise Exception("No embedded JPEG preview found in INDD file.")
-        best_jpeg = None
-        max_size = 0
-        for start in jpeg_starts:
-            end = data.find(b'\xFF\xD9', start)
-            if end != -1:
-                jpeg_data = data[start:end+2]
-                if len(jpeg_data) > max_size:
-                    max_size = len(jpeg_data)
-                    best_jpeg = jpeg_data
-        if best_jpeg and max_size > 1024:
-            return Image.open(io.BytesIO(best_jpeg))
-        else:
-            raise Exception("Could not find a valid embedded preview image in INDD file.")
-    elif ext == '.idml':
-        import zipfile
-        with zipfile.ZipFile(file_path, 'r') as z:
-            candidates = [name for name in z.namelist() if 'thumbnail' in name.lower() or name.lower().endswith(('.png', '.jpg', '.jpeg'))]
-            if candidates:
-                best_cand = max(candidates, key=lambda c: z.getinfo(c).file_size)
-                img_data = z.read(best_cand)
-                return Image.open(io.BytesIO(img_data))
-        raise Exception("No embedded preview image found in IDML container.")
-    raise Exception(f"Unsupported InDesign format: {ext}")
 
 def export_mesh_to_ascii_fbx(mesh, output_fbx_path):
     import numpy as np
@@ -297,6 +273,57 @@ def unpack_iba(file_path):
             html_chapters.append(content)
     return "<html><body>" + "<hr/>".join(html_chapters) + "</body></html>"
 
+def unpack_fb2(file_path):
+    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+        content = f.read()
+    return f"<html><body>{content}</body></html>"
+
+def unpack_snb(file_path):
+    import zipfile
+    import bz2
+    import re
+    if zipfile.is_zipfile(file_path):
+        with zipfile.ZipFile(file_path, 'r') as z:
+            names = z.namelist()
+            text_files = [n for n in names if n.lower().endswith(('.html', '.xhtml', '.xml', '.txt'))]
+            text_files.sort()
+            if not text_files:
+                raise Exception("SNB archive contains no readable text documents.")
+            chapters = []
+            for tf in text_files:
+                content = z.read(tf).decode('utf-8', errors='ignore')
+                if tf.lower().endswith('.txt'):
+                    content = f"<pre>{content}</pre>"
+                chapters.append(content)
+        return "<html><body>" + "<hr/>".join(chapters) + "</body></html>"
+        
+    with open(file_path, "rb") as f:
+        data = f.read()
+    
+    parts = data.split(b'BZh9')
+    text = ""
+    for p in parts[1:]:
+        chunk = b'BZh9' + p
+        try:
+            decomp = bz2.decompress(chunk)
+            text += decomp.decode('utf-8', errors='ignore') + "\n"
+        except Exception:
+            pass
+            
+    if not text.strip():
+        strings = re.findall(b'[\x20-\x7E]{4,}', data)
+        text = b"\n".join(strings).decode('ascii', errors='ignore')
+        
+    return f"<html><body><pre>{text}</pre></body></html>"
+
+def unpack_lrf(file_path):
+    import re
+    with open(file_path, "rb") as f:
+        data = f.read()
+    strings = re.findall(b'[\x20-\x7E]{4,}', data)
+    text = b"\n".join(strings).decode('ascii', errors='ignore')
+    return f"<html><body><pre>{text}</pre></body></html>"
+
 def extract_djvu_images(file_path):
     with open(file_path, "rb") as f:
         data = f.read()
@@ -328,7 +355,13 @@ def unpack_chm(file_path):
     
     temp_dir = tempfile.mkdtemp()
     try:
-        res = subprocess.run(['hh.exe', '-decompile', temp_dir, file_path], capture_output=True, text=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+        res = subprocess.run(
+            ['hh.exe', '-decompile', temp_dir, file_path],
+            capture_output=True,
+            encoding='utf-8',
+            errors='replace',
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+        )
         
         html_content = []
         for root, _, files in os.walk(temp_dir):
@@ -358,11 +391,20 @@ def load_ebook_doc(input_path):
     if ext == '.chm':
         html_str = unpack_chm(input_path)
         return fitz.open(stream=html_str.encode('utf-8', errors='ignore'), filetype="html")
-    elif ext in ['.mobi', '.azw3', '.azw']:
+    elif ext in ['.mobi', '.azw3', '.azw', '.pdb']:
         html_str = unpack_mobi_azw3(input_path)
         return fitz.open(stream=html_str.encode('utf-8'), filetype="html")
     elif ext == '.iba':
         html_str = unpack_iba(input_path)
+        return fitz.open(stream=html_str.encode('utf-8'), filetype="html")
+    elif ext == '.snb':
+        html_str = unpack_snb(input_path)
+        return fitz.open(stream=html_str.encode('utf-8'), filetype="html")
+    elif ext in ['.fb2', '.fbz']:
+        html_str = unpack_fb2(input_path)
+        return fitz.open(stream=html_str.encode('utf-8'), filetype="html")
+    elif ext == '.lrf':
+        html_str = unpack_lrf(input_path)
         return fitz.open(stream=html_str.encode('utf-8'), filetype="html")
     elif ext in ['.djvu', '.djv']:
         import shutil
@@ -999,20 +1041,364 @@ def pack_archive(source_dir, output_path, target_fmt):
                     full = os.path.join(root, file)
                     rel = os.path.relpath(full, source_dir)
                     tf.add(full, arcname=rel)
+def pdf_to_epub(input_path_or_doc, epub_path, title=None, author="Any Converter"):
+    import html
+    import uuid
+    import zipfile
+    import fitz
+
+    if isinstance(input_path_or_doc, str):
+        ext = os.path.splitext(input_path_or_doc)[1].lower()
+        if ext == '.pdf':
+            doc = fitz.open(input_path_or_doc)
+        else:
+            doc = load_ebook_doc(input_path_or_doc)
+        should_close = True
+        base_name = os.path.splitext(os.path.basename(input_path_or_doc))[0]
     else:
-        raise Exception(f"Unsupported target archive format: {target_fmt}")
+        doc = input_path_or_doc
+        should_close = False
+        base_name = "Converted Document"
+
+    try:
+        if not title:
+            meta_title = doc.metadata.get('title') if hasattr(doc, 'metadata') and doc.metadata else None
+            if meta_title and meta_title.strip():
+                title = meta_title.strip()
+            else:
+                title = base_name
+
+        meta_author = doc.metadata.get('author') if hasattr(doc, 'metadata') and doc.metadata else None
+        if meta_author and meta_author.strip():
+            author = meta_author.strip()
+
+        book_id = f"urn:uuid:{uuid.uuid4()}"
+        manifest_items = []
+        spine_items = []
+        nav_points = []
+
+        with zipfile.ZipFile(epub_path, 'w') as zip_epub:
+            # 1. mimetype (MUST be first file, uncompressed)
+            zip_epub.writestr('mimetype', 'application/epub+zip', compress_type=zipfile.ZIP_STORED)
+
+            # 2. META-INF/container.xml
+            container_xml = '''<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+    <rootfiles>
+        <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+    </rootfiles>
+</container>'''
+            zip_epub.writestr('META-INF/container.xml', container_xml, compress_type=zipfile.ZIP_DEFLATED)
+
+            # 3. OEBPS/style.css
+            css_content = '''@charset "utf-8";
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    margin: 5% 8%;
+    color: #1a1a1a;
+    background-color: #ffffff;
+}
+h1, h2, h3, h4, h5, h6 {
+    line-height: 1.25;
+    margin-top: 1.4em;
+    margin-bottom: 0.5em;
+    font-weight: 600;
+}
+p {
+    margin-top: 0;
+    margin-bottom: 1em;
+    text-align: justify;
+}
+img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 1.5em auto;
+}
+.image-wrapper {
+    text-align: center;
+    margin: 1.5em 0;
+}
+.page-container {
+    page-break-after: always;
+    margin-bottom: 2em;
+}
+.page-number {
+    font-size: 0.8em;
+    color: #888888;
+    text-align: center;
+    margin-top: 2em;
+    border-top: 1px solid #eeeeee;
+    padding-top: 0.5em;
+}
+'''
+            zip_epub.writestr('OEBPS/style.css', css_content, compress_type=zipfile.ZIP_DEFLATED)
+            manifest_items.append('<item id="style" href="style.css" media-type="text/css"/>')
+
+            image_count = 0
+
+            # 4. Iterate over pages
+            for page_idx in range(len(doc)):
+                page = doc.load_page(page_idx)
+                page_num = page_idx + 1
+                page_id = f"page_{page_num}"
+                page_filename = f"{page_id}.xhtml"
+
+                blocks = page.get_text("blocks")
+                page_html_parts = []
+                has_text = False
+
+                for b in blocks:
+                    if b[6] == 0:  # Text block
+                        text = b[4].strip()
+                        if text:
+                            has_text = True
+                            paras = text.split('\n\n')
+                            for p in paras:
+                                p_clean = p.replace('\n', ' ').strip()
+                                if p_clean:
+                                    if len(p_clean) < 80 and (b[3] - b[1] > 18 or p_clean.isupper()):
+                                        page_html_parts.append(f"<h2>{html.escape(p_clean)}</h2>")
+                                    else:
+                                        page_html_parts.append(f"<p>{html.escape(p_clean)}</p>")
+
+                # Extract embedded images
+                try:
+                    img_list = page.get_images(full=True)
+                except Exception:
+                    img_list = []
+
+                for img_info in img_list:
+                    try:
+                        xref = img_info[0]
+                        base_image = doc.extract_image(xref)
+                        if base_image:
+                            image_bytes = base_image["image"]
+                            image_ext = base_image["ext"].lower()
+                            if image_ext in ['jpg', 'jpeg', 'png', 'webp']:
+                                image_count += 1
+                                img_id = f"img_{image_count}"
+                                img_filename = f"images/{img_id}.{image_ext}"
+                                mime_type = f"image/{'jpeg' if image_ext in ['jpg', 'jpeg'] else image_ext}"
+
+                                zip_epub.writestr(f"OEBPS/{img_filename}", image_bytes, compress_type=zipfile.ZIP_DEFLATED)
+                                manifest_items.append(f'<item id="{img_id}" href="{img_filename}" media-type="{mime_type}"/>')
+                                page_html_parts.append(f'<div class="image-wrapper"><img src="{img_filename}" alt="Image {image_count}"/></div>')
+                    except Exception:
+                        pass
+
+                # Fallback for scanned pages or graphic-only pages
+                if not has_text and not img_list:
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                    image_count += 1
+                    img_id = f"img_page_{page_num}"
+                    img_filename = f"images/{img_id}.png"
+                    zip_epub.writestr(f"OEBPS/{img_filename}", pix.tobytes("png"), compress_type=zipfile.ZIP_DEFLATED)
+                    manifest_items.append(f'<item id="{img_id}" href="{img_filename}" media-type="image/png"/>')
+                    page_html_parts.append(f'<div class="image-wrapper"><img src="{img_filename}" alt="Page {page_num}"/></div>')
+
+                page_content = "\n        ".join(page_html_parts)
+                xhtml_doc = f'''<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>{html.escape(title)} - Page {page_num}</title>
+    <link rel="stylesheet" type="text/css" href="style.css"/>
+</head>
+<body>
+    <section class="page-container" epub:type="chapter">
+        {page_content}
+        <div class="page-number">{page_num}</div>
+    </section>
+</body>
+</html>'''
+                zip_epub.writestr(f"OEBPS/{page_filename}", xhtml_doc, compress_type=zipfile.ZIP_DEFLATED)
+                manifest_items.append(f'<item id="{page_id}" href="{page_filename}" media-type="application/xhtml+xml"/>')
+                spine_items.append(f'<itemref idref="{page_id}"/>')
+                nav_points.append(f'''    <navPoint id="nav_{page_id}" playOrder="{page_num}">
+        <navLabel><text>Page {page_num}</text></navLabel>
+        <content src="{page_filename}"/>
+    </navPoint>''')
+
+            # 5. OEBPS/toc.ncx (EPUB 2 compatibility)
+            ncx_content = f'''<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+    <head>
+        <meta name="dtb:uid" content="{book_id}"/>
+        <meta name="dtb:depth" content="1"/>
+        <meta name="dtb:totalPageCount" content="{len(doc)}"/>
+        <meta name="dtb:maxPageNumber" content="{len(doc)}"/>
+    </head>
+    <docTitle><text>{html.escape(title)}</text></docTitle>
+    <docAuthor><text>{html.escape(author)}</text></docAuthor>
+    <navMap>
+{chr(10).join(nav_points)}
+    </navMap>
+</ncx>'''
+            zip_epub.writestr('OEBPS/toc.ncx', ncx_content, compress_type=zipfile.ZIP_DEFLATED)
+            manifest_items.append('<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>')
+
+            # 6. OEBPS/nav.xhtml (EPUB 3 Navigation Document)
+            nav_list_items = [f'<li><a href="{page_id}.xhtml">Page {i + 1}</a></li>' for i, page_id in enumerate([f"page_{p+1}" for p in range(len(doc))])]
+            nav_xhtml = f'''<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Table of Contents</title>
+    <link rel="stylesheet" type="text/css" href="style.css"/>
+</head>
+<body>
+    <nav epub:type="toc" id="toc">
+        <h1>Table of Contents</h1>
+        <ol>
+            {chr(10).join(nav_list_items)}
+        </ol>
+    </nav>
+</body>
+</html>'''
+            zip_epub.writestr('OEBPS/nav.xhtml', nav_xhtml, compress_type=zipfile.ZIP_DEFLATED)
+            manifest_items.append('<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>')
+
+            # 7. OEBPS/content.opf
+            manifest_str = "\n        ".join(manifest_items)
+            spine_str = "\n        ".join(spine_items)
+
+            content_opf = f'''<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookID" version="3.0">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+        <dc:title>{html.escape(title)}</dc:title>
+        <dc:creator>{html.escape(author)}</dc:creator>
+        <dc:language>en</dc:language>
+        <dc:identifier id="BookID">{book_id}</dc:identifier>
+        <meta property="dcterms:modified">2026-08-18T12:00:00Z</meta>
+    </metadata>
+    <manifest>
+        {manifest_str}
+    </manifest>
+    <spine toc="ncx">
+        {spine_str}
+    </spine>
+</package>'''
+            zip_epub.writestr('OEBPS/content.opf', content_opf, compress_type=zipfile.ZIP_DEFLATED)
+    finally:
+        if should_close:
+            doc.close()
+
+def resolve_unique_path(output_dir, base_name, target_ext, src_ext=None, existing_claimed_paths=None, input_path=None):
+    """
+    Generates a collision-free output path in output_dir.
+    Checks before saving if any same name file exists in the destination folder or
+    is claimed by another active job.
+    If 'base_name.target_ext' does not exist in the folder (and is not the source input file,
+    and not claimed), it returns 'base_name.target_ext' WITHOUT any (1) number.
+    If a file with the same name already exists in the folder (or is claimed / is the input file),
+    it disambiguates by appending ' (1)', ' (2)', etc.
+    """
+    target_ext = target_ext.lstrip('.').lower().strip()
+    candidate = os.path.join(output_dir, f"{base_name}.{target_ext}")
+    
+    def norm(p):
+        return os.path.normcase(os.path.abspath(p)) if p else ""
+
+    claimed_set = {norm(p) for p in existing_claimed_paths if p} if existing_claimed_paths else set()
+    norm_input = norm(input_path) if input_path else ""
+
+    def is_taken(p):
+        norm_p = norm(p)
+        if norm_p in claimed_set:
+            return True
+        if norm_input and norm_p == norm_input:
+            return True
+        if os.path.exists(p):
+            return True
+        return False
+
+    if not is_taken(candidate):
+        return candidate
+        
+    # Append (1), (2), (3), ...
+    counter = 1
+    while True:
+        cand_num = os.path.join(output_dir, f"{base_name} ({counter}).{target_ext}")
+        if not is_taken(cand_num):
+            return cand_num
+        counter += 1
+
+def save_cur(im, filepath, hotspot=(0, 0)):
+    im = im.convert('RGBA')
+    w, h = im.size
+    if w > 256 or h > 256:
+        im = im.resize((32, 32), Image.Resampling.LANCZOS)
+        w, h = 32, 32
+    xor_bytes = bytearray()
+    for y in reversed(range(h)):
+        for x in range(w):
+            r, g, b, a = im.getpixel((x, y))
+            xor_bytes.extend([b, g, r, a])
+    row_bytes_len = (w + 31) // 32 * 4
+    and_bytes = bytearray()
+    for y in reversed(range(h)):
+        row = bytearray(row_bytes_len)
+        for x in range(w):
+            _, _, _, a = im.getpixel((x, y))
+            if a < 128:
+                row[x // 8] |= (1 << (7 - (x % 8)))
+        and_bytes.extend(row)
+    import struct
+    bih = struct.pack('<IIIHHIIIIII', 40, w, 2 * h, 1, 32, 0, len(xor_bytes) + len(and_bytes), 0, 0, 0, 0)
+    image_data = bih + xor_bytes + and_bytes
+    dir_entry = struct.pack('<BBBBHHII', w if w < 256 else 0, h if h < 256 else 0, 0, 0, hotspot[0], hotspot[1], len(image_data), 6 + 16)
+    header = struct.pack('<HHH', 0, 2, 1)
+    with open(filepath, 'wb') as f:
+        f.write(header + dir_entry + image_data)
+
+def save_xpm(im, filepath):
+    im = im.convert('RGB')
+    w, h = im.size
+    chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_=+[]{}|;:,.<>?'
+    im_q = im.quantize(colors=min(64, len(chars)))
+    palette = im_q.getpalette()
+    num_colors = min(64, len(palette) // 3)
+    color_map = {}
+    for i in range(num_colors):
+        r, g, b = palette[i*3], palette[i*3+1], palette[i*3+2]
+        color_map[i] = (chars[i], f'#{r:02x}{g:02x}{b:02x}')
+    with open(filepath, 'w', encoding='ascii') as f:
+        f.write('/* XPM */\nstatic char *image[] = {\n')
+        f.write(f'"{w} {h} {num_colors} 1",\n')
+        for i in range(num_colors):
+            sym, hex_c = color_map[i]
+            f.write(f'"{sym} c {hex_c}",\n')
+        pixels = im_q.load()
+        for y in range(h):
+            row = ''.join(color_map[pixels[x, y]][0] for x in range(w))
+            comma = ',' if y < h - 1 else ''
+            f.write(f'"{row}"{comma}\n')
+        f.write('};\n')
 
 class ConversionJob:
-    def __init__(self, input_path, target_format, output_dir=None):
+    def __init__(self, input_path, target_format, output_dir=None, existing_claimed_paths=None):
         self.input_path = input_path
         self.target_format = target_format.lower()
+        self._explicit_output_dir = output_dir is not None
         
         settings = SettingsManager()
         self.output_dir = output_dir or settings.get('output_dir') or os.path.dirname(input_path)
         
         filename = os.path.basename(input_path)
-        name, _ = os.path.splitext(filename)
-        self.output_path = os.path.join(self.output_dir, f"{name}.{self.target_format}")
+        name, src_ext = os.path.splitext(filename)
+        self.src_ext = src_ext
+        self.output_path = resolve_unique_path(
+            self.output_dir,
+            name,
+            self.target_format,
+            src_ext=src_ext,
+            existing_claimed_paths=existing_claimed_paths,
+            input_path=self.input_path
+        )
         
         self.status = "Pending"
         self.progress = 0
@@ -1020,32 +1406,58 @@ class ConversionJob:
 
     def _convert_image(self):
         try:
-            name_no_ext = os.path.splitext(os.path.basename(self.input_path))[0]
-            self.output_path = os.path.join(self.output_dir, f"{name_no_ext}.{self.target_format.lower().strip()}")
             target_fmt = self.target_format.lower().strip()
-            
             os.makedirs(self.output_dir, exist_ok=True)
             input_ext = os.path.splitext(self.input_path)[1].lower()
-            if input_ext in ['.indd', '.idml']:
-                img = open_indesign_preview(self.input_path)
-            elif input_ext in ['.eps', '.ps']:
+            if input_ext in ['.eps', '.ps']:
                 img = open_eps_preview(self.input_path)
             elif input_ext == '.cdr':
                 img = open_cdr_preview(self.input_path)
+            elif input_ext in ['.raw', '.cr2', '.nef', '.arw', '.dng', '.raf', '.pef']:
+                try:
+                    import rawpy
+                    with rawpy.imread(self.input_path) as raw:
+                        rgb = raw.postprocess()
+                        img = Image.fromarray(rgb)
+                except ImportError:
+                    raise Exception("RAW image conversion requires the 'rawpy' module. Please run: pip install rawpy")
+            elif input_ext == '.psd':
+                try:
+                    from psd_tools import PSDImage
+                    psd = PSDImage.open(self.input_path)
+                    img = psd.composite()
+                except ImportError:
+                    raise Exception("PSD image conversion requires the 'psd-tools' module. Please run: pip install psd-tools")
             else:
-                img = Image.open(self.input_path)
+                try:
+                    img = Image.open(self.input_path)
+                except Exception as pil_open_err:
+                    # If Pillow fails to open (e.g. OpenEXR .exr, .dpx, exotic encodings), decode via FFmpeg pipe into Pillow Image!
+                    ffmpeg_exe = get_local_ffmpeg_exe()
+                    if not ffmpeg_exe:
+                        raise pil_open_err
+                    cmd = [ffmpeg_exe, "-y", "-i", self.input_path, "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "-"]
+                    pipe_res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                    if pipe_res.returncode == 0 and pipe_res.stdout:
+                        import io
+                        img = Image.open(io.BytesIO(pipe_res.stdout))
+                    else:
+                        raise pil_open_err
             
             try:
                 # Handle alpha channel & mode conversions appropriately
-                if target_fmt in ['jpg', 'jpeg', 'bmp']:
-                    # JPEG and BMP do not support alpha transparency or paletted modes directly
+                if target_fmt in ['jpg', 'jpeg', 'bmp', 'pcx', 'ppm', 'pgm', 'pbm', 'pnm', 'sgi', 'dib']:
+                    # JPEG, BMP, DIB, PCX, PPM do not support alpha transparency or paletted modes directly
                     if img.mode in ('RGBA', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
                         bg = Image.new('RGB', img.size, (255, 255, 255))
                         rgba = img.convert('RGBA')
                         bg.paste(rgba, mask=rgba.split()[3])
                         img = bg
-                    else:
+                    elif img.mode not in ('RGB', 'L'):
                         img = img.convert('RGB')
+                elif target_fmt in ['tiff', 'tif']:
+                    if img.mode not in ('RGB', 'RGBA', 'L', 'CMYK'):
+                        img = img.convert('RGBA' if 'transparency' in img.info or img.mode in ('RGBA', 'LA') else 'RGB')
                 elif target_fmt == 'png':
                     if img.mode not in ('RGB', 'RGBA', 'L', '1', 'P'):
                         img = img.convert('RGBA')
@@ -1055,21 +1467,34 @@ class ConversionJob:
                 elif target_fmt == 'gif':
                     if img.mode not in ('P', 'L'):
                         img = img.convert('P')
-                elif target_fmt in ['heic', 'heif']:
-                    img = img.convert('RGB')
+                elif target_fmt in ['heic', 'heif', 'avif']:
+                    if img.mode not in ('RGB', 'RGBA'):
+                        img = img.convert('RGB')
 
-                # Pillow uses 'jpeg' as the format name for jpg files
+                # Determine Pillow format code
                 if target_fmt == 'jpg':
                     pil_fmt = 'jpeg'
+                elif target_fmt in ['tiff', 'tif']:
+                    pil_fmt = 'TIFF'
                 elif target_fmt in ['heic', 'heif']:
                     pil_fmt = 'HEIF'
+                elif target_fmt in ['ppm', 'pgm', 'pbm', 'pnm']:
+                    pil_fmt = 'PPM'
                 elif target_fmt == 'ico':
                     pil_fmt = 'ICO'
+                elif target_fmt == 'dib':
+                    pil_fmt = 'DIB'
                 else:
-                    pil_fmt = target_fmt
+                    pil_fmt = target_fmt.upper()
                 
                 if target_fmt == 'ico':
                     img.save(self.output_path, format='ICO', sizes=[(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)])
+                elif target_fmt == 'cur':
+                    save_cur(img, self.output_path)
+                elif target_fmt == 'xpm':
+                    save_xpm(img, self.output_path)
+                elif target_fmt == 'xbm':
+                    img.convert('1').save(self.output_path, format='XBM')
                 elif target_fmt == 'svg':
                     import base64
                     import io
@@ -1081,7 +1506,24 @@ class ConversionJob:
                     with open(self.output_path, 'w', encoding='utf-8') as f:
                         f.write(svg_content)
                 else:
-                    img.save(self.output_path, format=pil_fmt)
+                    try:
+                        img.save(self.output_path, format=pil_fmt)
+                    except Exception as save_err:
+                        # If Pillow save fails (e.g. JXL), encode via FFmpeg fallback from PNG buffer
+                        ffmpeg_exe = get_local_ffmpeg_exe()
+                        if not ffmpeg_exe:
+                            raise save_err
+                        temp_png = self.output_path + ".tmp.png"
+                        img.save(temp_png, format='PNG')
+                        cmd = [ffmpeg_exe, "-y", "-i", temp_png]
+                        if target_fmt not in ['gif', 'webp']:
+                            cmd.extend(["-frames:v", "1", "-update", "1"])
+                        cmd.append(self.output_path)
+                        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                        if os.path.exists(temp_png):
+                            os.remove(temp_png)
+                        if res.returncode != 0:
+                            raise Exception(f"Encode failed: {res.stdout.decode('utf-8', errors='ignore')}")
             finally:
                 try:
                     img.close()
@@ -1090,13 +1532,25 @@ class ConversionJob:
             self.status = "Completed"
             self.progress = 100
         except Exception as e:
+            import traceback
+            print(f"[DEBUG PIL ERR] {traceback.format_exc()}")
             pillow_err = str(e)
             ffmpeg_err = ""
-            # Fallback to FFmpeg for image conversion if Pillow fails (e.g. animated GIFs, special encodings)
+            
+            # Prevent FFmpeg fallback for proprietary document formats
+            if input_ext in ['.cdr']:
+                self.status = "Failed"
+                self.error_message = pillow_err
+                return
+                
+            # Fallback to FFmpeg for direct image conversion if entire pipeline encountered an error
             try:
                 ffmpeg_exe = get_local_ffmpeg_exe()
                 if ffmpeg_exe:
-                    cmd = [ffmpeg_exe, "-y", "-i", self.input_path, self.output_path]
+                    cmd = [ffmpeg_exe, "-y", "-i", self.input_path]
+                    if target_fmt not in ['gif', 'webp']:
+                        cmd.extend(["-frames:v", "1", "-update", "1"])
+                    cmd.append(self.output_path)
                     res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
                     if res.returncode == 0:
                         self.status = "Completed"
@@ -1137,7 +1591,7 @@ class ConversionJob:
 
             cmd.extend(["-i", self.input_path])
             
-            if self.target_format in ["mp3", "wav", "flac", "m4a", "aac", "aiff", "alac", "wma", "amr", "ac3", "eac3", "thd", "dts"]:
+            if self.target_format in ["mp3", "wav", "flac", "m4a", "aac", "aiff", "alac", "wma", "amr", "ac3", "eac3", "thd", "dts", "ogg"]:
                 ext = os.path.splitext(self.input_path)[1].lower().lstrip('.')
                 has_art = False
                 
@@ -1183,15 +1637,135 @@ class ConversionJob:
                     cmd.extend(["-acodec", "flac"])
                 elif self.target_format in ["m4a", "aac"]:
                     cmd.extend(["-acodec", "aac", "-b:a", audio_bitrate])
+                elif self.target_format == "ogg":
+                    cmd.extend(["-acodec", "libvorbis", "-b:a", audio_bitrate])
+                elif self.target_format == "wma":
+                    cmd.extend(["-acodec", "wmav2", "-b:a", audio_bitrate])
+                elif self.target_format == "alac":
+                    cmd.extend(["-acodec", "alac", "-f", "ipod"])
+                elif self.target_format == "ac3":
+                    cmd.extend(["-acodec", "ac3", "-b:a", audio_bitrate])
+                elif self.target_format == "eac3":
+                    cmd.extend(["-acodec", "eac3", "-b:a", audio_bitrate])
+                elif self.target_format == "thd":
+                    cmd.extend(["-acodec", "truehd", "-strict", "-2"])
+                elif self.target_format == "dts":
+                    cmd.extend(["-acodec", "dca", "-strict", "-2"])
+                elif self.target_format == "aiff":
+                    cmd.extend(["-acodec", "pcm_s16be"])
+                elif self.target_format == "amr":
+                    cmd.extend(["-acodec", "libopencore_amrnb", "-ar", "8000", "-ac", "1", "-b:a", "12.2k"])
                 else:
                     cmd.extend(["-acodec", "copy"])
                 cmd.append(self.output_path)
             else:
                 # Video conversions
                 vcodec = default_video_codec
-                if self.target_format == 'webm':
+                acodec = default_audio_codec
+                extra_args = []
+                disable_audio = False
+
+                if self.target_format in ['m3u8', 'm3u', 'hls']:
+                    # Package HLS stream and segments cleanly into dedicated subfolder
+                    hls_dir = os.path.splitext(self.output_path)[0]
+                    os.makedirs(hls_dir, exist_ok=True)
+                    m3u8_name = os.path.basename(self.output_path)
+                    target_m3u8 = os.path.join(hls_dir, m3u8_name)
+                    segment_pattern = os.path.join(hls_dir, "segment_%03d.ts")
+                    extra_args.extend([
+                        "-f", "hls",
+                        "-hls_time", "6",
+                        "-hls_list_size", "0",
+                        "-hls_segment_filename", segment_pattern
+                    ])
+                    self.output_path = target_m3u8
+                elif self.target_format in ['mpd', 'dash']:
+                    # Package DASH stream and chunks cleanly into dedicated subfolder
+                    dash_dir = os.path.splitext(self.output_path)[0]
+                    os.makedirs(dash_dir, exist_ok=True)
+                    mpd_name = os.path.basename(self.output_path)
+                    target_mpd = os.path.join(dash_dir, mpd_name)
+                    extra_args.extend([
+                        "-f", "dash",
+                        "-seg_duration", "6",
+                        "-use_template", "1",
+                        "-use_timeline", "1"
+                    ])
+                    self.output_path = target_mpd
+                elif self.target_format in ['m4s', 'fmp4']:
+                    extra_args.extend(["-f", "mp4", "-movflags", "+frag_keyframe+empty_moov+default_base_moof"])
+                elif self.target_format == 'cmfv':
+                    extra_args.extend(["-f", "mp4", "-movflags", "+frag_keyframe+empty_moov+default_base_moof"])
+                    disable_audio = True
+                elif self.target_format == 'cmfa':
+                    extra_args.extend(["-f", "mp4", "-movflags", "+frag_keyframe+empty_moov+default_base_moof", "-vn"])
+                elif self.target_format in ['ismv', 'isma']:
+                    extra_args.extend(["-f", "ismv"])
+                    if self.target_format == 'isma':
+                        extra_args.append("-vn")
+                elif self.target_format == 'f4f':
+                    extra_args.extend(["-f", "f4v"])
+                elif self.target_format in ['rm', 'rmvb']:
+                    extra_args.extend(["-f", "rm"])
+                    vcodec = "rv20"
+                    acodec = "ac3"
+                elif self.target_format == 'webm':
                     vcodec = "libvpx-vp9"
-                elif vcodec != "copy":
+                    acodec = "libopus"
+                elif self.target_format == 'ogv':
+                    vcodec = "libtheora"
+                    acodec = "libvorbis"
+                elif self.target_format in ['m2ts', 'mts', 'ts']:
+                    acodec = "ac3"
+                elif self.target_format in ['mpg', 'mpeg', 'vob', 'm2v', 'm1v']:
+                    vcodec = "mpeg2video" if self.target_format != 'm1v' else "mpeg1video"
+                    acodec = "ac3" if self.target_format == 'vob' else "mp2"
+                elif self.target_format in ['wmv', 'asf']:
+                    vcodec = "wmv2"
+                    acodec = "wmav2"
+                    if self.target_format == 'asf':
+                        extra_args.extend(["-f", "asf"])
+                elif self.target_format == 'f4v':
+                    extra_args.extend(["-f", "f4v"])
+                elif self.target_format == 'mxf':
+                    extra_args.extend(["-f", "mxf", "-pix_fmt", "yuv422p", "-ar", "48000"])
+                    vcodec = "mpeg2video"
+                    acodec = "pcm_s16le"
+                elif self.target_format == 'nut':
+                    extra_args.extend(["-f", "nut"])
+                elif self.target_format in ['h264', 'h265', 'hevc']:
+                    vcodec = "libx265" if self.target_format in ['h265', 'hevc'] else "libx264"
+                    disable_audio = True
+                elif self.target_format == 'yuv':
+                    vcodec = "rawvideo"
+                    extra_args.extend(["-f", "rawvideo", "-pix_fmt", "yuv420p"])
+                    disable_audio = True
+                elif self.target_format in ['3gp', '3g2']:
+                    extra_args.extend(["-f", self.target_format])
+                input_ext = os.path.splitext(self.input_path)[1].lower().lstrip('.')
+                
+                # Check for incompatible copy situations
+                non_mp4_audio_exts = {'asf', 'wmv', 'wma', 'rm', 'rmvb', 'ra', 'vro', 'dat', 'mpg', 'mpeg', 'm2v', 'm1v', 'ogg', 'ogv', 'flv', 'swf', 'webm', 'wav', 'aiff', 'amr'}
+                if acodec == "copy" and self.target_format in ['mp4', 'm4v', 'mov', '3gp', '3g2'] and input_ext in non_mp4_audio_exts:
+                    acodec = "aac"
+                elif acodec == "copy" and self.target_format in ['webm']:
+                    acodec = "libopus"
+                elif acodec == "copy" and self.target_format in ['ogv']:
+                    acodec = "libvorbis"
+                elif acodec == "copy" and self.target_format in ['wmv', 'asf']:
+                    acodec = "wmav2"
+
+                non_mp4_video_exts = {'asf', 'wmv', 'rm', 'rmvb', 'flv', 'vro', 'dat', 'mpg', 'mpeg', 'm2v', 'm1v', 'webm', 'ogv', 'avi', 'mvi', 'roq'}
+                if vcodec == "copy" and self.target_format in ['mp4', 'm4v', 'mov'] and input_ext in non_mp4_video_exts:
+                    vcodec = "h264"
+                elif vcodec == "copy" and self.target_format in ['webm']:
+                    vcodec = "libvpx-vp9"
+                elif vcodec == "copy" and self.target_format in ['ogv']:
+                    vcodec = "libtheora"
+                elif vcodec == "copy" and self.target_format in ['wmv', 'asf']:
+                    vcodec = "wmv2"
+
+                if vcodec != "copy":
                     if vcodec == "hevc":
                         if hw_accel == 'nvenc':
                             vcodec = "hevc_nvenc"
@@ -1218,27 +1792,35 @@ class ConversionJob:
                         vp9_cpu_map = {"fast": "4", "medium": "2", "slow": "0"}
                         cmd.extend(["-cpu-used", vp9_cpu_map.get(video_preset, "2")])
                         cmd.extend(["-deadline", "good"])
-                    elif hw_accel == 'amf':
+                    elif vcodec in ["h264_amf", "hevc_amf"]:
                         amf_preset_map = {"fast": "speed", "medium": "balanced", "slow": "quality"}
                         actual_preset = amf_preset_map.get(video_preset, "balanced")
                         cmd.extend(["-preset", actual_preset])
-                    else:
+                    elif vcodec in ["libx264", "libx265", "h264_nvenc", "hevc_nvenc", "h264_qsv", "hevc_qsv"]:
                         actual_preset = video_preset
                         cmd.extend(["-preset", actual_preset])
 
-                acodec = default_audio_codec
-                if self.target_format == 'webm':
-                    acodec = "libopus"
-                elif acodec == "mp3":
+                if acodec == "mp3":
                     acodec = "libmp3lame"
                     
-                cmd.extend(["-acodec", acodec])
-                if acodec != "copy":
-                    cmd.extend(["-b:a", audio_bitrate])
+                if disable_audio:
+                    cmd.append("-an")
+                else:
+                    cmd.extend(["-acodec", acodec])
+                    if acodec not in ["copy", "pcm_s16le"]:
+                        cmd.extend(["-b:a", audio_bitrate])
                     
+                cmd.extend(extra_args)
                 cmd.append(self.output_path)
                 
-            process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                encoding='utf-8',
+                errors='replace',
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            )
             
             output_lines = []
             duration = 0.0
@@ -1276,20 +1858,106 @@ class ConversionJob:
                     except Exception:
                         pass
                         
-            if process.returncode == 0:
+            file_ok = os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 0
+            has_finished_mux = any("Lsize=" in line or "muxing overhead" in line for line in output_lines)
+            
+            if process.returncode == 0 or (file_ok and has_finished_mux):
                 self.status = "Completed"
                 self.progress = 100
             else:
-                self.status = "Failed"
-                full_output = "".join(output_lines)
-                try:
-                    with open("ffmpeg_error.log", "w", encoding="utf-8") as f:
-                        f.write(f"Command: {' '.join(cmd)}\n\nOutput:\n{full_output}")
-                except Exception:
-                    pass
-                # Get last 3 lines of output for the error message
-                tail = "".join(output_lines[-3:]).strip()
-                self.error_message = f"FFmpeg exited with code {process.returncode}: {tail}"
+                # Fallback to software encoding with standard safe codecs if initial attempt failed
+                safe_vcodec = "libx264"
+                safe_acodec = "aac"
+                fallback_extra = []
+                
+                if self.target_format in ['webm']:
+                    safe_vcodec = "libvpx-vp9"
+                    safe_acodec = "libopus"
+                elif self.target_format in ['ogv']:
+                    safe_vcodec = "libtheora"
+                    safe_acodec = "libvorbis"
+                elif self.target_format in ['wmv', 'asf']:
+                    safe_vcodec = "wmv2"
+                    safe_acodec = "wmav2"
+                    if self.target_format == 'asf': fallback_extra.extend(["-f", "asf"])
+                elif self.target_format in ['mpg', 'mpeg', 'vob', 'm2v', 'm1v']:
+                    safe_vcodec = "mpeg2video" if self.target_format != 'm1v' else "mpeg1video"
+                    safe_acodec = "ac3" if self.target_format == 'vob' else "mp2"
+                elif self.target_format in ['avi']:
+                    safe_vcodec = "mpeg4"
+                    safe_acodec = "libmp3lame"
+                elif self.target_format in ['flv', 'f4v']:
+                    safe_vcodec = "libx264"
+                    safe_acodec = "aac"
+                    fallback_extra.extend(["-f", "flv"])
+                elif self.target_format in ['mxf']:
+                    safe_vcodec = "mpeg2video"
+                    safe_acodec = "pcm_s16le"
+                    fallback_extra.extend(["-f", "mxf", "-pix_fmt", "yuv422p", "-ar", "48000"])
+                elif self.target_format in ['mp3']:
+                    safe_acodec = "libmp3lame"
+                elif self.target_format in ['wav']:
+                    safe_acodec = "pcm_s16le"
+                elif self.target_format in ['flac']:
+                    safe_acodec = "flac"
+
+                fallback_cmd = [ffmpeg_exe, "-y", "-i", self.input_path]
+                if self.target_format not in ["mp3", "wav", "flac", "m4a", "aac", "aiff", "alac", "wma", "amr", "ac3", "eac3", "thd", "dts", "ogg"]:
+                    fallback_cmd.extend(["-vcodec", safe_vcodec, "-preset", "fast"])
+                    if disable_audio:
+                        fallback_cmd.append("-an")
+                    else:
+                        fallback_cmd.extend(["-acodec", safe_acodec, "-b:a", audio_bitrate])
+                else:
+                    fallback_cmd.extend(["-vn", "-acodec", safe_acodec])
+                    if safe_acodec not in ["copy", "pcm_s16le"]:
+                        fallback_cmd.extend(["-b:a", audio_bitrate])
+                fallback_cmd.extend(fallback_extra)
+                fallback_cmd.append(self.output_path)
+
+                fb_proc = subprocess.Popen(
+                    fallback_cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    encoding='utf-8',
+                    errors='replace',
+                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                )
+                fb_output = []
+                for line in fb_proc.stdout:
+                    fb_output.append(line)
+                    if duration == 0.0:
+                        dur_match = duration_re.search(line)
+                        if dur_match:
+                            h, m, s = dur_match.groups()
+                            duration = int(h) * 3600 + int(m) * 60 + float(s)
+                    if duration > 0.0:
+                        time_match = time_re.search(line)
+                        if time_match:
+                            h, m, s = time_match.groups()
+                            current_time = int(h) * 3600 + int(m) * 60 + float(s)
+                            new_progress = min(99, int((current_time / duration) * 100))
+                            if new_progress != getattr(self, 'progress', 0):
+                                self.progress = new_progress
+                                if getattr(self, 'on_update', None):
+                                    self.on_update()
+                fb_proc.wait()
+                file_ok = os.path.exists(self.output_path) and os.path.getsize(self.output_path) > 0
+                has_finished_mux = any("Lsize=" in line or "muxing overhead" in line for line in fb_output)
+                
+                if fb_proc.returncode == 0 or (file_ok and has_finished_mux):
+                    self.status = "Completed"
+                    self.progress = 100
+                else:
+                    self.status = "Failed"
+                    full_output = "".join(output_lines) + "\n--- Fallback Output ---\n" + "".join(fb_output)
+                    try:
+                        with open("ffmpeg_error.log", "w", encoding="utf-8") as f:
+                            f.write(f"Command: {' '.join(cmd)}\nFallback: {' '.join(fallback_cmd)}\n\nOutput:\n{full_output}")
+                    except Exception:
+                        pass
+                    tail = "".join(fb_output[-3:]).strip()
+                    self.error_message = f"FFmpeg exited with code {fb_proc.returncode}: {tail}"
                 
         except Exception as e:
             self.status = "Failed"
@@ -1304,7 +1972,14 @@ class ConversionJob:
             
             cmd = [exe_path, self.input_path, "-o", self.output_path]
             
-            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+            res = subprocess.run(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                encoding='utf-8',
+                errors='replace',
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            )
             
             if res.returncode == 0:
                 self.status = "Completed"
@@ -1394,7 +2069,7 @@ class ConversionJob:
                     if not headers:
                         raise Exception("Cannot convert to CSV: No structured fields found.")
                         
-                    headers = sorted(list(headers))
+                    headers = sorted(list(headers), key=lambda x: str(x) if x is not None else "")
                     writer = csv.DictWriter(f, fieldnames=headers)
                     writer.writeheader()
                     for item in data:
@@ -1404,7 +2079,8 @@ class ConversionJob:
                     import fitz
                     import html as html_lib
                     if isinstance(data, list) and data and isinstance(data[0], dict):
-                        headers = sorted(list(set().union(*(item.keys() for item in data if isinstance(item, dict)))))
+                        raw_headers = list(set().union(*(item.keys() for item in data if isinstance(item, dict))))
+                        headers = sorted(raw_headers, key=lambda x: str(x) if x is not None else "")
                         rows_html = "".join("<tr>" + "".join(f"<td style='border:1px solid #ddd;padding:8px;'>{html_lib.escape(str(row.get(h, '')))}</td>" for h in headers) + "</tr>" for row in data if isinstance(row, dict))
                         header_html = "".join(f"<th style='border:1px solid #ddd;padding:8px;background:#f2f4f7;text-align:left;'>{html_lib.escape(str(h))}</th>" for h in headers)
                         html_content = f"<html><body style='font-family:sans-serif;padding:16px;'><table style='border-collapse:collapse;width:100%;font-size:12px;'><thead><tr>{header_html}</tr></thead><tbody>{rows_html}</tbody></table></body></html>"
@@ -1416,6 +2092,39 @@ class ConversionJob:
                     with open(self.output_path, 'wb') as f_out:
                         f_out.write(pdf_bytes)
                     doc.close()
+                elif ext_out == '.xml':
+                    import xmltodict
+                    import re
+                    
+                    def sanitize_keys(obj):
+                        if isinstance(obj, dict):
+                            new_dict = {}
+                            for k, v in obj.items():
+                                new_k = str(k).strip() if k is not None else "item"
+                                new_k = re.sub(r'[^a-zA-Z0-9_\-.]', '_', new_k)
+                                if new_k and new_k[0].isdigit():
+                                    new_k = '_' + new_k
+                                if not new_k:
+                                    new_k = "item"
+                                new_dict[new_k] = sanitize_keys(v)
+                            return new_dict
+                        elif isinstance(obj, list):
+                            return [sanitize_keys(i) for i in obj]
+                        else:
+                            return obj
+                            
+                    safe_data = sanitize_keys(data)
+                    
+                    if isinstance(safe_data, list):
+                        xml_data = {'root': {'item': safe_data}}
+                    elif isinstance(safe_data, dict):
+                        if len(safe_data) == 1:
+                            xml_data = safe_data
+                        else:
+                            xml_data = {'root': safe_data}
+                    else:
+                        xml_data = {'root': {'value': str(safe_data)}}
+                    f.write(xmltodict.unparse(xml_data, pretty=True))
                 else:
                     raise Exception(f"Unsupported target data format: {ext_out}")
             
@@ -1482,49 +2191,65 @@ class ConversionJob:
 
     def _convert_ebook(self):
         try:
-            doc = load_ebook_doc(self.input_path)
             target_fmt = self.target_format.lower().strip()
-            image_formats = ['png', 'jpg', 'jpeg', 'webp', 'bmp']
+            image_formats = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'tiff', 'tif', 'avif', 'jxl', 'heic', 'heif', 'tga', 'pcx', 'ppm']
 
-            if target_fmt == 'pdf':
-                pdf_bytes = doc.convert_to_pdf()
-                with open(self.output_path, 'wb') as f:
-                    f.write(pdf_bytes)
-            elif target_fmt in image_formats:
-                import fitz
-                num_pages = len(doc)
-                if num_pages == 0:
-                    raise Exception("E-Book file has no pages.")
-                if num_pages == 1:
-                    page = doc.load_page(0)
-                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                    if target_fmt in ['webp', 'bmp']:
-                        from PIL import Image
-                        mode = "RGBA" if pix.alpha else "RGB"
-                        img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
-                        img.save(self.output_path)
-                    else:
-                        pix.save(self.output_path)
-                else:
-                    name_no_ext = os.path.splitext(os.path.basename(self.input_path))[0]
-                    folder_path = os.path.join(self.output_dir, f"{name_no_ext}_images")
-                    os.makedirs(folder_path, exist_ok=True)
-                    for i in range(num_pages):
-                        page = doc.load_page(i)
-                        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                        out_name = f"page_{i + 1}.{target_fmt}"
-                        out_path = os.path.join(folder_path, out_name)
-                        if target_fmt in ['webp', 'bmp']:
+            if target_fmt == 'epub':
+                pdf_to_epub(self.input_path, self.output_path)
+            else:
+                doc = load_ebook_doc(self.input_path)
+                if target_fmt == 'pdf':
+                    pdf_bytes = doc.convert_to_pdf()
+                    with open(self.output_path, 'wb') as f:
+                        f.write(pdf_bytes)
+                elif target_fmt in image_formats:
+                    import fitz
+                    num_pages = len(doc)
+                    if num_pages == 0:
+                        raise Exception("E-Book file has no pages.")
+                        
+                    def _save_pixmap(pix, out_path):
+                        if target_fmt in ['png', 'jpg', 'jpeg']:
+                            pix.save(out_path)
+                        else:
                             from PIL import Image
                             mode = "RGBA" if pix.alpha else "RGB"
                             img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
-                            img.save(out_path)
-                        else:
-                            pix.save(out_path)
-                    self.output_path = folder_path
-            else:
-                raise Exception(f"Unsupported eBook target format: {target_fmt}")
-            doc.close()
+                            if target_fmt in ['jpg', 'jpeg', 'bmp', 'pcx', 'ppm']:
+                                if img.mode != 'RGB': img = img.convert('RGB')
+                            elif target_fmt in ['tiff', 'tif']:
+                                pfmt = 'TIFF'
+                            elif target_fmt in ['heic', 'heif']:
+                                pfmt = 'HEIF'
+                            else:
+                                pfmt = target_fmt.upper()
+                            try:
+                                img.save(out_path, format=pfmt if 'pfmt' in locals() else None)
+                            except Exception:
+                                # Fallback via temp png and ffmpeg
+                                temp_png = out_path + ".tmp.png"
+                                img.save(temp_png, format='PNG')
+                                subprocess.run(['ffmpeg', '-y', '-i', temp_png, '-frames:v', '1', '-update', '1', out_path], check=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                                if os.path.exists(temp_png): os.remove(temp_png)
+
+                    if num_pages == 1:
+                        page = doc.load_page(0)
+                        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                        _save_pixmap(pix, self.output_path)
+                    else:
+                        name_no_ext = os.path.splitext(os.path.basename(self.input_path))[0]
+                        folder_path = os.path.join(self.output_dir, f"{name_no_ext}_images")
+                        os.makedirs(folder_path, exist_ok=True)
+                        for i in range(num_pages):
+                            page = doc.load_page(i)
+                            pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                            out_name = f"page_{i + 1}.{target_fmt}"
+                            out_path = os.path.join(folder_path, out_name)
+                            _save_pixmap(pix, out_path)
+                        self.output_path = folder_path
+                else:
+                    raise Exception(f"Unsupported eBook target format: {target_fmt}")
+                doc.close()
             self.status = "Completed"
             self.progress = 100
         except Exception as e:
@@ -1707,29 +2432,18 @@ class ConversionJob:
             is_cff = 'CFF ' in font or font.sfntVersion == 'OTTO'
             font.close()
             
-            if target == 'ttf':
-                if is_cff:
-                    # Needs outline conversion (CFF -> TrueType)
+            if target in ['ttf', 'otf']:
+                if target == 'ttf' and is_cff:
+                    # If CFF outlines, try otf2ttf for outline conversion if installed, otherwise save directly
                     try:
                         subprocess.run(['otf2ttf', self.input_path, '-o', self.output_path, '--overwrite'], check=True, capture_output=True)
-                    except FileNotFoundError:
-                        raise Exception("otf2ttf module is missing. Please run: pip install otf2ttf")
-                    except subprocess.CalledProcessError as e:
-                        raise Exception(f"otf2ttf conversion failed: {e.stderr.decode()}")
+                    except (FileNotFoundError, subprocess.CalledProcessError):
+                        font = TTFont(self.input_path, fontNumber=fontNumber)
+                        font.flavor = None
+                        font.save(self.output_path)
+                        font.close()
                 else:
-                    # Already TrueType outlines (e.g. from TTF, WOFF, WOFF2)
-                    font = TTFont(self.input_path)
-                    font.flavor = None
-                    font.save(self.output_path)
-                    font.close()
-            
-            elif target == 'otf':
-                if not is_cff:
-                    # Needs TrueType -> CFF conversion which is not supported in fontTools easily
-                    raise Exception("Conversion from TrueType (TTF) to OpenType (CFF/OTF) outlines is not natively supported.")
-                else:
-                    # Already CFF outlines (e.g. from OTF, WOFF, WOFF2)
-                    font = TTFont(self.input_path)
+                    font = TTFont(self.input_path, fontNumber=fontNumber)
                     font.flavor = None
                     font.save(self.output_path)
                     font.close()
@@ -1912,7 +2626,14 @@ class ConversionJob:
                         break
             if soffice_exe:
                 cmd = [soffice_exe, "--headless", "--convert-to", "pdf", "--outdir", self.output_dir, self.input_path]
-                res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                res = subprocess.run(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    encoding='utf-8',
+                    errors='replace',
+                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                )
                 if res.returncode == 0 and os.path.exists(self.output_path):
                     self.status = "Completed"
                     self.progress = 100
@@ -1986,7 +2707,14 @@ class ConversionJob:
                 exe_path = get_office2pdf_exe()
                 if exe_path:
                     cmd = [exe_path, self.input_path, "-o", self.output_path]
-                    res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                    res = subprocess.run(
+                        cmd,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        encoding='utf-8',
+                        errors='replace',
+                        creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                    )
                     if res.returncode == 0:
                         self.status = "Completed"
                         self.progress = 100
@@ -2018,7 +2746,14 @@ class ConversionJob:
                                 break
                     if soffice_exe:
                         cmd = [soffice_exe, "--headless", "--convert-to", target_fmt, "--outdir", self.output_dir, self.input_path]
-                        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                        res = subprocess.run(
+                            cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            encoding='utf-8',
+                            errors='replace',
+                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                        )
                         if res.returncode == 0 and os.path.exists(self.output_path):
                             self.status = "Completed"
                             self.progress = 100
@@ -2040,7 +2775,14 @@ class ConversionJob:
                                 break
                     if inkscape_exe:
                         cmd = [inkscape_exe, self.input_path, f"--export-filename={self.output_path}"]
-                        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                        res = subprocess.run(
+                            cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            encoding='utf-8',
+                            errors='replace',
+                            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+                        )
                         if res.returncode == 0 and os.path.exists(self.output_path):
                             self.status = "Completed"
                             self.progress = 100
@@ -2082,7 +2824,7 @@ class ConversionJob:
 
             import fitz  # PyMuPDF
             target_fmt = self.target_format.lower().strip()
-            image_formats = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'ico']
+            image_formats = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'ico', 'tiff', 'tif', 'avif', 'jxl', 'heic', 'heif', 'tga', 'pcx', 'ppm']
 
             doc = fitz.open(self.input_path)
 
@@ -2093,14 +2835,33 @@ class ConversionJob:
 
             if target_fmt in image_formats:
                 pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                if target_fmt == 'ico':
+                if target_fmt in ['png', 'jpg', 'jpeg']:
+                    pix.save(self.output_path)
+                elif target_fmt == 'ico':
                     img_data = pix.tobytes("png")
                     from PIL import Image
                     import io
                     img = Image.open(io.BytesIO(img_data)).convert('RGBA')
                     img.save(self.output_path, format='ICO', sizes=[(16,16), (32,32), (48,48), (64,64), (128,128), (256,256)])
                 else:
-                    pix.save(self.output_path)
+                    from PIL import Image
+                    mode = "RGBA" if pix.alpha else "RGB"
+                    img = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+                    if target_fmt in ['jpg', 'jpeg', 'bmp', 'pcx', 'ppm']:
+                        if img.mode != 'RGB': img = img.convert('RGB')
+                    elif target_fmt in ['tiff', 'tif']:
+                        pfmt = 'TIFF'
+                    elif target_fmt in ['heic', 'heif']:
+                        pfmt = 'HEIF'
+                    else:
+                        pfmt = target_fmt.upper()
+                    try:
+                        img.save(self.output_path, format=pfmt if 'pfmt' in locals() else None)
+                    except Exception:
+                        temp_png = self.output_path + ".tmp.png"
+                        img.save(temp_png, format='PNG')
+                        subprocess.run(['ffmpeg', '-y', '-i', temp_png, '-frames:v', '1', '-update', '1', self.output_path], check=True, creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
+                        if os.path.exists(temp_png): os.remove(temp_png)
             elif target_fmt == 'pdf':
                 pdf_bytes = doc.convert_to_pdf()
                 with open(self.output_path, 'wb') as f:
@@ -2139,18 +2900,34 @@ class ConversionJob:
             if getattr(self, 'on_update', None):
                 self.on_update()
 
-    def run(self, on_update=None):
+    def run(self, on_update=None, existing_claimed_paths=None):
         self.status = "Converting"
         self.on_update = on_update
         if self.on_update: self.on_update()
         
-        # Always rebuild output_path from the current target_format (dropdown may have changed it)
-        name_no_ext = os.path.splitext(os.path.basename(self.input_path))[0]
-        self.output_path = os.path.join(self.output_dir, f"{name_no_ext}.{self.target_format.lower()}")
+        # Refresh output_dir from settings in case it changed since the job was queued
+        if not getattr(self, '_explicit_output_dir', False):
+            from src.backend.settings import SettingsManager
+            settings_dir = SettingsManager().get('output_dir')
+            if settings_dir:
+                self.output_dir = settings_dir
+            else:
+                self.output_dir = os.path.dirname(self.input_path)
+            
+        # Re-resolve unique output_path right before conversion, checking if same name exists on disk
+        name_no_ext, src_ext = os.path.splitext(os.path.basename(self.input_path))
+        self.output_path = resolve_unique_path(
+            self.output_dir,
+            name_no_ext,
+            self.target_format,
+            src_ext=src_ext,
+            existing_claimed_paths=existing_claimed_paths,
+            input_path=self.input_path
+        )
         os.makedirs(self.output_dir, exist_ok=True)
         
         ext = os.path.splitext(self.input_path)[1].lower()
-        image_formats = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.heic', '.heif', '.psd', '.ico', '.indd', '.idml', '.eps', '.ps', '.cdr', '.tga', '.pcx', '.pbm', '.pgm', '.ppm', '.exr', '.dpx', '.raf', '.pef']
+        image_formats = ['.png', '.jpg', '.jpeg', '.webp', '.bmp', '.gif', '.heic', '.heif', '.ico', '.tiff', '.tif', '.avif', '.jxl', '.psd', '.raw', '.cr2', '.nef', '.arw', '.dng', '.raf', '.pef', '.tga', '.pcx', '.ppm', '.pgm', '.pbm', '.pnm', '.icns', '.sgi', '.dds', '.dib', '.xbm', '.xpm', '.cur', '.exr', '.dpx', '.eps', '.ps', '.cdr']
         vector_formats = ['.svg', '.ai', '.cdr', '.xps', '.oxps']
         data_formats = ['.json', '.csv', '.xml', '.yaml', '.yml', '.vcf', '.ics']
         markup_formats = ['.md', '.html', '.htm', '.rtf', '.txt', '.log']
@@ -2162,7 +2939,7 @@ class ConversionJob:
             '.vsd', '.vsdx', '.pub', '.mpp'
         ]
         
-        ebook_formats = ['.pdf', '.epub', '.mobi', '.azw3', '.azw', '.iba', '.djvu', '.djv', '.cbr', '.cbz', '.cb7', '.cbt', '.chm']
+        ebook_formats = ['.pdf', '.epub', '.mobi', '.azw3', '.azw', '.iba', '.djvu', '.djv', '.cbr', '.cbz', '.cb7', '.cbt', '.chm', '.snb', '.pdb', '.lrf', '.fb2', '.fbz']
         model3d_formats = [
             '.obj', '.stl', '.ply', '.glb', '.gltf', '.off', '.dae', '.fbx', 
             '.step', '.stp', '.iges', '.igs', '.dxf', '.dwg', '.3mf', '.scad', '.dwf', '.3ds',
@@ -2176,9 +2953,9 @@ class ConversionJob:
         gis_formats = ['.geojson', '.kml', '.kmz', '.gpx', '.shp']
         archive_formats = ['.zip', '.rar', '.7z', '.tar', '.gz', '.tgz', '.bz2', '.tbz2', '.xz', '.txz', '.iso', '.img', '.cab']
         
-        print(f"[CONVERT] input: {self.input_path}")
-        print(f"[CONVERT] target_format: {self.target_format}")
-        print(f"[CONVERT] output_path: {self.output_path}")
+        safe_print(f"[CONVERT] input: {self.input_path}")
+        safe_print(f"[CONVERT] target_format: {self.target_format}")
+        safe_print(f"[CONVERT] output_path: {self.output_path}")
         
         target = f".{self.target_format.lower()}"
         
@@ -2189,7 +2966,7 @@ class ConversionJob:
             is_media = False
         elif ext in doc_formats and self.target_format == 'pdf':
             is_media = False
-        elif ext in ebook_formats and (target in image_formats or target == '.pdf'):
+        elif ext in ebook_formats and (target in image_formats or target in ['.pdf', '.epub']):
             is_media = False
         elif ext in vector_formats or target in vector_formats:
             is_media = False
@@ -2217,7 +2994,7 @@ class ConversionJob:
             self._convert_markup()
         elif ext in doc_formats and self.target_format == 'pdf':
             self._convert_document()
-        elif ext in ebook_formats and (target in image_formats or target == '.pdf'):
+        elif ext in ebook_formats and (target in image_formats or target in ['.pdf', '.epub']):
             self._convert_ebook()
         elif ext in vector_formats or target in vector_formats:
             self._convert_vector()
@@ -2238,7 +3015,7 @@ class ConversionJob:
         else:
             self._convert_media()
             
-        print(f"[CONVERT] status after run: {self.status}, error: {self.error_message}")
+        safe_print(f"[CONVERT] status after run: {self.status}, error: {self.error_message}")
         if self.status == "Completed":
             self.progress = 100
         if on_update: on_update()
@@ -2248,9 +3025,20 @@ class ConverterManager:
         self.jobs = []
         
     def add_job(self, input_path, target_format):
-        job = ConversionJob(input_path, target_format)
+        claimed = [
+            j.output_path for j in self.jobs 
+            if hasattr(j, 'output_path') and j.output_path and getattr(j, 'status', 'Pending') in ('Pending', 'Converting')
+        ]
+        job = ConversionJob(input_path, target_format, existing_claimed_paths=claimed)
         self.jobs.append(job)
         return job
+
+    def remove_job(self, job):
+        if job in self.jobs:
+            self.jobs.remove(job)
+
+    def clear_jobs(self):
+        self.jobs.clear()
         
     def run_job_async(self, job, on_update=None):
         def _run():

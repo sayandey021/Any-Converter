@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Changelog-v1.2.1-blueviolet.svg?style=for-the-badge&logo=git&logoColor=white" alt="Changelog" /></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/Changelog-v1.5.0-blueviolet.svg?style=for-the-badge&logo=git&logoColor=white" alt="Changelog" /></a>
   <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.9+-blue.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python Version" /></a>
   <a href="https://flet.dev"><img src="https://img.shields.io/badge/UI-Flet-7c3aed.svg?style=for-the-badge&logo=flutter&logoColor=white" alt="Flet GUI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="License: MIT" /></a>
@@ -40,13 +40,13 @@ Any Converter supports **over 100+ file extensions** across 13 major categories:
 
 | Category | Highlights & Formats | Converts To |
 | :--- | :--- | :--- |
-| **🖼️ Images** | PNG, JPG, WebP, GIF, HEIC/HEIF, AVIF, JXL, BMP, ICO, TIFF, PSD, RAW, INDD | PNG, JPG, WebP, GIF, HEIC, AVIF, BMP, ICO, TIFF |
+| **🖼️ Images** | PNG, JPG, WebP, GIF, HEIC/HEIF, AVIF, JXL, BMP, ICO, TIFF, PSD, RAW (DNG, CR2, NEF, ARW) | PNG, JPG, WebP, GIF, HEIC, AVIF, BMP, ICO, TIFF |
 | **🎥 Video** | MP4, MKV, AVI, MOV, WebM, WMV, FLV, MXF, HLS (`.m3u8`), DASH (`.mpd`), CMAF | MP4, MKV, AVI, MOV, WebM, WMV, Audio extraction |
 | **🎵 Audio** | MP3, WAV, FLAC, M4A, AAC, OGG, Opus, AIFF, ALAC, High-Res DSD/DFF, Tracker modules | MP3, WAV, FLAC, M4A, AAC, OGG, Opus, AIFF |
 | **📄 Documents** | DOCX, DOC, WPD, WPS, ODT, RTF, HTML, TXT, XLS, XLSX, PPT, PPTX, Visio, Publisher, MS Project | PDF |
 | **✒️ Vector Graphics** | SVG, AI, EPS, PS, CorelDRAW (`.cdr`), XPS, OXPS | PNG, JPG, WebP, PDF, SVG |
 | **🧊 3D Models & CAD** | OBJ, STL, PLY, GLB, GLTF, FBX, STEP, IGES, DXF, DWG, OpenSCAD (`.scad`), DWF, 3DS | OBJ, STL, PLY, GLB, GLTF, FBX, STEP |
-| **📚 PDFs & E-Books** | PDF, EPUB, MOBI, AZW3, DJVU, CBR, CBZ, CB7 comic archives | PDF, Image pages (PNG/JPG) |
+| **📚 PDFs & E-Books** | PDF, EPUB, MOBI, AZW3, DJVU, CBR, CBZ, FB2, LRF | PDF, Image pages (PNG/JPG), EPUB |
 | **📊 Data & Config** | JSON, YAML, CSV, XML, vCard (`.vcf`), iCalendar (`.ics`) | JSON, YAML, CSV, XML, PDF |
 | **🗄️ Databases** | SQLite (`.db`, `.sqlite`), SQL Dumps, MS Access (`.mdb`, `.accdb`) | SQL, SQLite, JSON, CSV, XML, YAML |
 | **🗺️ Geospatial** | GeoJSON, KML, KMZ, GPX, Shapefiles (`.shp`) | GeoJSON, KML, GPX, CSV, JSON |

@@ -673,56 +673,37 @@ class MainView(ft.Container):
                 print(f"[WARN] Ignored unsupported file format: {f.name}")
                 continue
             
+            from src.ui.conversion_card import FORMAT_GROUPS
+            
             # Smart default target format
-            if ext in ['mkv', 'avi', 'mov', 'webm', 'wmv', 'flv', 'f4v', 'mxf', 'asf', 'mts', 'm2ts', 'vob', 'ts', '3gp', '3g2', 'ogv', 'rm', 'rmvb', 'vro', 'dat', 'mpg', 'mpeg', 'm3u8', 'm3u', 'm4s']:
-                target = 'mp4'
-            elif ext in ['mp4']:
-                target = 'mkv'
-            elif ext in ['wav', 'flac', 'm4a', 'aac', 'ogg', 'aiff', 'alac', 'dff', 'dsf', 'mqa', 'mod', 's3m', 'xm', 'it', 'wma', 'ra', 'bwf', 'amr', 'ac3', 'eac3', 'thd', 'dts', 'dtshd', 'aob']:
-                target = 'mp3'
-            elif ext in ['mp3']:
-                target = 'wav'
-            elif ext in ['jpg', 'jpeg', 'webp', 'bmp', 'heic', 'heif', 'psd', 'tiff', 'tif', 'raw', 'cr2', 'nef', 'arw', 'dng', 'avif', 'jxl']:
-                target = 'png'
-            elif ext == 'png':
-                target = 'jpg'
-            elif ext in ['glb', 'fbx']:
-                target = 'obj'
-            elif ext == 'gif':
-                target = 'mp4'
-            elif ext in ['md']:
+            if ext in FORMAT_GROUPS['video']:
+                target = 'mkv' if ext == 'mp4' else 'mp4'
+            elif ext in FORMAT_GROUPS['audio']:
+                target = 'wav' if ext == 'mp3' else 'mp3'
+            elif ext in FORMAT_GROUPS['image']:
+                target = 'jpg' if ext == 'png' else 'png'
+            elif ext in FORMAT_GROUPS['markup']:
                 target = 'html'
-            elif ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
-                if ext in ['epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm']:
-                    target = 'pdf'
-                else:
-                    target = 'png'
-            elif ext in ['csv', 'xml', 'yaml', 'yml']:
-                target = 'json'
-            elif ext in ['json']:
-                target = 'yaml'
-            elif ext in [
-                'doc', 'docx', 'docm', 'dot', 'dotx', 'dotm', 'rtf', 'txt', 'log', 'odt', 'mht', 'html', 'htm',
-                'xls', 'xlsx', 'xlsm', 'xlsb', 'ods',
-                'ppt', 'pptx', 'pptm', 'pps', 'odp'
-            ]:
+            elif ext in ['pdf', 'epub', 'mobi', 'azw3', 'azw', 'iba', 'djvu', 'djv', 'chm', 'snb', 'pdb', 'lrf', 'fb2', 'fbz']:
+                target = 'pdf' if ext != 'pdf' else 'png'
+            elif ext in FORMAT_GROUPS['data']:
+                target = 'yaml' if ext == 'json' else 'json'
+            elif ext in FORMAT_GROUPS['document']:
                 target = 'pdf'
-            elif ext in ['obj', 'stl', 'ply', 'off', 'dae', 'fbx', 'step', 'stp', 'iges', 'igs', 'dxf', 'dwg', '3mf']:
-                target = 'glb'
-            elif ext in ['glb', 'gltf']:
-                target = 'obj'
-            elif ext in ['sql', 'db', 'sqlite', 'sqlite3', 'mdb', 'accdb']:
+            elif ext in FORMAT_GROUPS['model3d']:
+                target = 'glb' if ext != 'glb' else 'obj'
+            elif ext in FORMAT_GROUPS['database']:
                 target = 'sqlite' if ext == 'sql' else 'sql'
-            elif ext in ['geojson', 'kml', 'kmz', 'gpx', 'shp']:
+            elif ext in FORMAT_GROUPS['gis']:
                 target = 'geojson' if ext in ['kml', 'kmz', 'gpx', 'shp'] else 'kml'
-            elif ext in ['zip', 'rar', '7z', 'tar', 'gz', 'tgz', 'bz2', 'tbz2', 'xz', 'txz', 'iso', 'img', 'mds', 'mdf']:
+            elif ext in FORMAT_GROUPS['archive']:
                 target = '7z' if ext == 'zip' else 'zip'
-            elif ext in ['srt', 'vtt', 'ass', 'ssa', 'sub', 'scc']:
+            elif ext in FORMAT_GROUPS['subtitle']:
                 target = 'vtt' if ext == 'srt' else 'srt'
-            elif ext in ['ttf', 'otf', 'woff', 'woff2']:
+            elif ext in FORMAT_GROUPS['font']:
                 target = 'woff2' if ext in ['ttf', 'otf', 'woff'] else 'ttf'
-            elif ext in ['svg', 'ico']:
-                target = 'png'
+            elif ext in FORMAT_GROUPS['vector']:
+                target = 'png' if ext == 'svg' else 'pdf'
             else:
                 target = 'mp4'
 
@@ -737,6 +718,8 @@ class MainView(ft.Container):
     def remove_card(self, card):
         if card.job.status == "Completed":
             self.total_converted += 1
+        if hasattr(self, 'converter_manager') and hasattr(self.converter_manager, 'remove_job'):
+            self.converter_manager.remove_job(card.job)
         if card in self.cards:
             self.cards.remove(card)
         if card in self.list_view.controls:
@@ -748,6 +731,8 @@ class MainView(ft.Container):
         for card in self.cards:
             if card.job.status == "Completed":
                 self.total_converted += 1
+        if hasattr(self, 'converter_manager') and hasattr(self.converter_manager, 'clear_jobs'):
+            self.converter_manager.clear_jobs()
         self.cards.clear()
         self.list_view.controls.clear()
         self._refresh_ui()
@@ -773,7 +758,13 @@ class MainView(ft.Container):
             pending_cards = [c for c in self.cards if c.job.status == "Pending"]
             for card in pending_cards[:available_slots]:
                 card.job.status = "Converting"
-                self.main_page.run_thread(card.job.run, card.update_status)
+                other_claimed = [
+                    c.job.output_path for c in self.cards 
+                    if c is not card and hasattr(c.job, 'output_path') and c.job.output_path and c.job.status in ("Converting", "Pending")
+                ]
+                def _run_worker(j=card.job, cl=other_claimed, cb=card.update_status):
+                    j.run(cb, existing_claimed_paths=cl)
+                self.main_page.run_thread(_run_worker)
 
     def _refresh_ui(self):
         from src.backend.history_manager import HistoryManager

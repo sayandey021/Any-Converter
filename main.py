@@ -1,5 +1,18 @@
 import os
 import sys
+
+# Ensure stdout and stderr never crash on Windows terminals with Unicode file names
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+if hasattr(sys.stderr, 'reconfigure'):
+    try:
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 import flet as ft
 
 # Add local flet_view to path for dev mode

@@ -19,13 +19,15 @@ class HistoryManager:
         self.records = self._load_history()
 
     def _load_history(self):
-        if not os.path.exists(self.history_file):
+        if not os.path.exists(self.history_file) or os.path.getsize(self.history_file) == 0:
             return []
         try:
             with open(self.history_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
+                content = f.read().strip()
+                if not content:
+                    return []
+                return json.loads(content)
         except Exception as e:
-            print(f"Error loading history: {e}")
             return []
 
     def _save_history(self):

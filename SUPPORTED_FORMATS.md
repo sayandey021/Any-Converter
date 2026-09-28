@@ -6,7 +6,7 @@ Any Converter supports a wide range of file formats across different media and d
 **Supported Inputs:**
 - **Standard & Web:** `.png`, `.jpg`, `.jpeg`, `.webp`, `.bmp`, `.gif`, `.heic`, `.heif`, `.avif`, `.jxl`
 - **Icons & UI:** `.ico`, `.icns`, `.cur`, `.xbm`, `.xpm`
-- **Professional & Raw:** `.tiff`, `.tif`, `.psd`, `.raw`, `.cr2`, `.nef`, `.arw`, `.dng`, `.indd`, `.idml`, `.raf`, `.pef`, `.exr`, `.dpx`
+- **Professional & Raw:** `.tiff`, `.tif`, `.psd`, `.raw`, `.cr2`, `.nef`, `.arw`, `.dng`, `.raf`, `.pef`, `.exr`, `.dpx`
 - **Legacy & Specialized:** `.tga`, `.pcx`, `.ppm`, `.pgm`, `.pbm`, `.pnm`, `.sgi`, `.dds`, `.dib`
 
 **Can be converted to:**
@@ -14,7 +14,7 @@ Any Converter supports a wide range of file formats across different media and d
 - **Icons & UI:** `.ico`, `.icns`, `.cur`, `.xbm`, `.xpm`
 - **Professional & Specialized:** `.tiff`, `.tif`, `.tga`, `.pcx`, `.ppm`, `.pgm`, `.pbm`, `.pnm`, `.sgi`, `.dds`, `.dib`
 
-*(Note: `.psd`, `.indd`, `.idml`, `.raw`, `.cr2`, `.nef`, `.arw`, `.dng`, `.raf`, `.pef` are supported as inputs for conversion by extracting their image data/previews, but cannot be exported to).*
+*(Note: `.psd`, `.raw`, `.cr2`, `.nef`, `.arw`, `.dng`, `.raf`, `.pef` are supported as inputs for conversion by extracting their image data/debayering RAW data, but cannot be exported to).*
 
 ## 🎥 Video
 **Supported Inputs:**
@@ -63,9 +63,9 @@ Any Converter supports a wide range of file formats across different media and d
 *(Note: Supports bidirectional conversion between JSON, YAML, CSV, XML, and exports vCard Contacts (.vcf) and iCalendar events (.ics) into structured tabular data or PDF).*
 
 ## 📚 PDFs & E-Books
-**Supported Inputs:** `.pdf`, `.epub`, `.mobi`, `.azw3`, `.azw`, `.iba`, `.djvu`, `.djv`, `.cbr`, `.cbz`, `.cb7`, `.cbt`, `.chm`
-**Can be converted to:** `.pdf`, `.png`, `.jpg`, `.jpeg`, `.webp`
-*Note: E-Book and Comic formats (`.epub`, `.mobi`, `.cbr`, `.cbz`, etc.) can be converted directly into `.pdf` documents or extracted page-by-page as images.*
+**Supported Inputs:** `.pdf`, `.epub`, `.mobi`, `.azw3`, `.azw`, `.iba`, `.djvu`, `.djv`, `.cbr`, `.cbz`, `.cb7`, `.cbt`, `.chm`, `.snb`, `.pdb`, `.lrf`, `.fb2`, `.fbz`
+**Can be converted to:** `.pdf`, `.png`, `.jpg`, `.jpeg`, `.webp`, `.epub`
+*Note: PDFs and E-Book/Comic formats (`.epub`, `.mobi`, `.cbr`, `.cbz`, `.djvu`, `.fb2`, etc.) can be bidirectionally converted between `.pdf` and `.epub`, or extracted page-by-page as images.*
 
 ## 🧊 3D Models & CAD
 **Supported Inputs:** `.obj`, `.stl`, `.ply`, `.glb`, `.gltf`, `.off`, `.dae`, `.fbx`, `.step`, `.stp`, `.iges`, `.igs`, `.dxf`, `.dwg`, `.3mf`, `.scad`, `.dwf`, `.3ds`, `.blend`, `.x`, `.lwo`, `.lws`, `.md5mesh`, `.smd`, `.vta`, `.ogex`, `.3d`, `.b3d`, `.q3d`, `.q3s`, `.nff`, `.ter`, `.mdl`, `.xml`, `.ifc`, `.x3d`, `.x3db`, `.csm`, `.bvh`, `.ase`, `.cob`, `.scn`, `.ac`, `.ms3d`, `.mqo`, `.ndo`, `.irr`, `.irrmesh`, `.pmx`

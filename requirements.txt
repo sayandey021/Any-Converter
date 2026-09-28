@@ -11,3 +11,6 @@ trimesh
 networkx
 scipy
 pyyaml
+rawpy
+numpy
+psd-tools

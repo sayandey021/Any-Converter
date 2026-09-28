@@ -42,8 +42,8 @@ def patch_flet_exe():
     print("Patching flet.exe resources...")
     commands = [
         [rcedit_path, flet_exe, "--set-icon", icon_path],
-        [rcedit_path, flet_exe, "--set-file-version", "1.5.0.0"],
-        [rcedit_path, flet_exe, "--set-product-version", "1.5.0.0"],
+        [rcedit_path, flet_exe, "--set-file-version", "1.5.2.0"],
+        [rcedit_path, flet_exe, "--set-product-version", "1.5.2.0"],
         [rcedit_path, flet_exe, "--set-version-string", "FileDescription", "Any Converter"],
         [rcedit_path, flet_exe, "--set-version-string", "ProductName", "Any Converter"],
         [rcedit_path, flet_exe, "--set-version-string", "CompanyName", "SwiftGrab"],
